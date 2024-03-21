@@ -282,7 +282,8 @@ function Write-MdTable {
             $list += @($_)
 
             $properties += @($_.PsObject.Properties.Name | where {
-                $_ -notin $properties
+                # (karlr 2024_03_14): Null values discovered in the output
+                $_ -and $_ -notin $properties
             })
         }
     }

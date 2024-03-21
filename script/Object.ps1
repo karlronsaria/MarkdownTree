@@ -26,14 +26,15 @@ function Write-MarkdownTree {
         }
 
         switch ($InputObject) {
-            { $_ -is [Array] } {
+            { $InputObject -is [Array] } {
                 foreach ($subitem in $InputObject) {
                     if ($NoTables) {
-                        Write-MarkdownTree " " $Level -AsTree:$AsTree
-                        Write-MarkdownTree $subitem ($Level + 1) -AsTree:$AsTree
+                        Write-MarkdownTree " " $Level -AsTree:$AsTree -NoTables:$NoTables
+                        Write-MarkdownTree $subitem ($Level + 1) -AsTree:$AsTree -NoTables:$NoTables
                     }
                     else {
                         $table = $subitem | Write-MdTable
+                        Write-Output ""
 
                         if ($BranchTables) {
                             $lead = '- '
@@ -46,13 +47,17 @@ function Write-MarkdownTree {
                         else {
                             $table
                         }
+
+                        Write-Output ""
                     }
                 }
             }
 
-            { $_ -is [PsCustomObject] } {
-                $properties = $InputObject.PsObject.Properties `
-                    | where {
+            { $InputObject -is [PsCustomObject] } {
+                $properties = $InputObject.
+                    PsObject.
+                    Properties |
+                    where {
                         'NoteProperty' -eq $_.MemberType
                     }
 
@@ -68,7 +73,8 @@ function Write-MarkdownTree {
                         Write-MarkdownTree `
                             -InputObject $property.Value `
                             -Level $Level `
-                            -AsTree:$AsTree
+                            -AsTree:$AsTree `
+                            -NoTables:$NoTables
 
                         continue
                     }
@@ -76,7 +82,8 @@ function Write-MarkdownTree {
                     $list = Write-MarkdownTree `
                         -InputObject $property.Value `
                         -Level ($Level + 1) `
-                        -AsTree:$AsTree
+                        -AsTree:$AsTree `
+                        -NoTables:$NoTables
 
                     $inline =
                         [String]::IsNullOrWhiteSpace($property.Name) `
@@ -146,7 +153,7 @@ function Find-Subtree {
         $subresults = @()
 
         switch ($InputObject) {
-            { $_ -is [Array] } {
+            { $InputObject -is [Array] } {
                 $i = 0
 
                 $subresults = @(while ($i -lt $InputObject.Count) {
@@ -159,7 +166,7 @@ function Find-Subtree {
                 })
             }
 
-            { $_ -is [PsCustomObject] } {
+            { $InputObject -is [PsCustomObject] } {
                 $properties = $InputObject.PsObject.Properties `
                     | where {
                         'NoteProperty' -eq $_.MemberType
