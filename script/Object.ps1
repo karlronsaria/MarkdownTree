@@ -567,19 +567,9 @@ function Get-MarkdownTree {
 
                     $props = Get-NoteProperty $InputObject
 
-                    if (@($props).Count -eq 1) {
-                        switch (@($props)[0].Value) {
-                            { $_ -is [PsCustomObject] } {
-                                return $null -eq (Get-NoteProperty $_)
-                            }
-
-                            default {
-                                return $false
-                            }
-                        }
-                    }
-
-                    return $false
+                    return @($props).Count -eq 1 -and
+                        @($props)[0].Value -is [PsCustomObject] -and
+                        $null -eq (Get-NoteProperty $_)
                 }
 
                 function Convert-LeafToString {
@@ -706,7 +696,13 @@ function Get-MarkdownTree {
                             -InputObject $stack[$level - 1] `
                             -Name $key `
                             -Value ([PsCustomObject]@{
-                                $value = $stack[$level]
+                                $value =
+                                    if (@($stack).Count -gt 1) {
+                                        $stack[$level]
+                                    }
+                                    else {
+                                        $null
+                                    }
                             })
 
                         # $stack[$level - 1] = $stack[$level]
@@ -734,7 +730,14 @@ function Get-MarkdownTree {
                     Add-Property `
                         -InputObject $stack[$level - 1] `
                         -Name $content `
-                        -Value $stack[$level]
+                        -Value $(
+                            if (@($stack).Count -gt 1) {
+                                $stack[$level]
+                            }
+                            else {
+                                $null
+                            }
+                        )
 
                     $prevName = $content
                 }
@@ -750,7 +753,6 @@ function Get-MarkdownTree {
                         -PrevName $prevName
                 }
 
-                # todo
                 Convert-LeafToString $stack[0]
                 return $stack[0]
             }
@@ -777,7 +779,7 @@ function Get-MarkdownTree {
                     $highestLevel = $_.Level
                 }
 
-                Write-Output $_
+                $_
             }
 
         return $content `
