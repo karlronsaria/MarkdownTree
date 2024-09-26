@@ -567,9 +567,11 @@ function Get-MarkdownTree {
 
                     $props = Get-NoteProperty $InputObject
 
-                    return @($props).Count -eq 1 -and
-                        @($props)[0].Value -is [PsCustomObject] -and
-                        $null -eq (Get-NoteProperty $_)
+                    return @($props).Count -eq 1 -and $(
+                            $value = @($props)[0].Value;
+                            $value -is [PsCustomObject]
+                        ) -and
+                        $null -eq (Get-NoteProperty $value)
                 }
 
                 function Convert-LeafToString {
