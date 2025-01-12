@@ -490,6 +490,7 @@ function Get-MarkdownTree {
                     Level = $level
                     Type = $type
                     Content = $content.Value
+                    IndentLength = $indent.Length
                 }
             }
         }
@@ -600,7 +601,7 @@ function Get-MarkdownTree {
                 $level = $TableRow.Level
                 $content = $TableRow.Content
 
-                if ($null -eq $stack[$level - 1]) {
+                if ($null -eq $stack[$level - 1] -and $null -eq $snippet) {
                     return 'Error'
                 }
 
@@ -648,7 +649,7 @@ function Get-MarkdownTree {
                         $snippet = [PsCustomObject]@{
                             Lines = @()
                             Language = $blockCapture.Language.Value
-                            Indent = $blockCapture.Indent.Value
+                            Indent = $TableRow.IndentLength
                         }
                     }
                     else {
@@ -666,9 +667,9 @@ function Get-MarkdownTree {
                     return
                 }
                 elseif ($null -ne $snippet) {
-                    Add-MdCodeBlockRow `
-                        -CodeBlock $snippet `
-                        -Row $content
+                    $snippet.Lines += @(
+                        "$(' ' * ($TableRow.IndentLength - $snippet.Indent))$content"
+                    )
 
                     return
                 }

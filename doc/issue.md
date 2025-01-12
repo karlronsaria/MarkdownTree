@@ -1,6 +1,8 @@
 # issue
 
-- [ ] 2025_01_09_052828
+## completed
+
+- [x] 2025_01_09_052828
   - howto
     - in powershell
 
