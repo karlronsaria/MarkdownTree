@@ -428,6 +428,8 @@ function Get-MarkdownTree {
                 $indentLength = 0
                 $pattern =
                     '^(?<indent>\s*)((?<header>#+)|(?<branch_start>\-|\*|\d+\.)\s)?\s*(?<content>.+)?$'
+                $inCodeBlock = $false
+                $codeBlockLevel = -1
             }
 
             Process {
@@ -437,40 +439,52 @@ function Get-MarkdownTree {
                 $content = $capture.Groups['content']
                 $type = @()
 
-                $type += if ($capture.Groups['branch_start'].Success) {
-                    if ($content.Success) {
-                        @('ListItem')
-                    }
-                    else {
-                        @('UngraftedRow')
-                    }
-                }
-                elseif ($header.Success) {
-                    @('Header')
-                }
-                else {
-                    @()
-                }
-
-                if ('Header' -notin $type `
-                    -and $content.Success
-                ) {
-                    if (($content.Value | Test-MdTable)) {
-                        $type += @('TableRow')
-                    }
-                    elseif (($content.Value | Test-MdCodeBlock)) {
+                if ($inCodeBlock) {
+                    if (($content.Value | Test-MdCodeBlock)) {
                         $type += @('CodeBlock')
+                        $inCodeBlock = $false
                     }
                     else {
                         $type += @('UngraftedRow')
                     }
                 }
+                else {
+                    $type += if ($capture.Groups['branch_start'].Success) {
+                        if ($content.Success) {
+                            @('ListItem')
+                        }
+                        else {
+                            @('UngraftedRow')
+                        }
+                    }
+                    elseif ($header.Success) {
+                        @('Header')
+                    }
+                    else {
+                        @()
+                    }
 
-                if ($type.Count -eq 0) {
-                    return
+                    if ('Header' -notin $type `
+                        -and $content.Success
+                    ) {
+                        if (($content.Value | Test-MdTable)) {
+                            $type += @('TableRow')
+                        }
+                        elseif (($content.Value | Test-MdCodeBlock)) {
+                            $type += @('CodeBlock')
+                            $inCodeBlock = -not $inCodeBlock
+                        }
+                        else {
+                            $type += @('UngraftedRow')
+                        }
+                    }
+
+                    if ($type.Count -eq 0) {
+                        return
+                    }
                 }
 
-                $level = if ('Header' -in $type) {
+                $nextLevel = if ('Header' -in $type) {
                     $header.Length
                 }
                 elseif ('Header' -in $prevType) {
@@ -483,11 +497,21 @@ function Get-MarkdownTree {
                     $level
                 }
 
+                if (-not $inCodeBlock -or 'CodeBlock' -in $type) {
+                    $level = $nextLevel
+                }
+
                 $indentLength = $indent.Length
                 $prevType = $type
 
                 return [PsCustomObject]@{
-                    Level = $level
+                    Level =
+                        if ($inCodeBlock) {
+                            $level
+                        }
+                        else {
+                            $nextLevel
+                        }
                     Type = $type
                     Content = $content.Value
                     IndentLength = $indent.Length
@@ -653,13 +677,20 @@ function Get-MarkdownTree {
                         }
                     }
                     else {
+                        $value = [PsCustomObject]@{
+                            Lines = $snippet.Lines
+                            Language = $snippet.Language
+                        }
+
+                        if (-not $prevName) {
+                            $stack[$prevLevel - 1] = $value
+                            return
+                        }
+
                         Add-Property `
                             -InputObject $stack[$prevLevel - 1] `
                             -Name $prevName `
-                            -Value $([PsCustomObject]@{
-                                Lines = $snippet.Lines
-                                Language = $snippet.Language
-                            })
+                            -Value $value
 
                         $snippet = $null
                     }
