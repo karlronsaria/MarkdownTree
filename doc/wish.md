@@ -1,6 +1,6 @@
 # wish
 
-- [ ] 2024_10_18_034157
+- [ ] 2024-10-18-034157
   - new list item type just dropped: the *definition* list item
 
     ```markdown

@@ -143,7 +143,7 @@ function Remove-MdStylers {
 
     # link
     # - url: <https://www.markdownguide.org/cheat-sheet>
-    # - retrieved: 2023_09_13
+    # - retrieved: 2023-09-13
     $stylers = @('``', '\*\*', '\*', '__', '_', '-', '~~', '==')
 
     foreach ($styler in $stylers) {
@@ -282,7 +282,7 @@ function Write-MdTable {
             $list += @($_)
 
             $properties += @($_.PsObject.Properties.Name | where {
-                # (karlr 2024_03_14): Null values discovered in the output
+                # (karlr 2024-03-14): Null values discovered in the output
                 $_ -and $_ -notin $properties
             })
         }

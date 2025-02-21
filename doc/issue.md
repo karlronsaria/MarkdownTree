@@ -2,17 +2,17 @@
 
 ## completed
 
-- [x] 2025_01_09_052828
+- [x] 2025-01-09-052828
   - howto
     - in powershell
 
       ```powershell
-      $tree = dir C:\note\log\log_-_2024_12_21_pwsh_NotebookRecovery.md | cat | Get-MarkdownTree
+      $tree = dir C:\note\log\log_-_2024-12-21_pwsh_NotebookRecovery.md | cat | Get-MarkdownTree
       $tree
       ```
 
       ```powershell
-      $tree[-1] | Get-NextTree | foreach { $_."2025_01_06".Lines }
+      $tree[-1] | Get-NextTree | foreach { $_."2025-01-06".Lines }
       ```
 
     - in ``log...NotebookRecovery.md``
@@ -21,7 +21,7 @@
       # pwsh: notebook recovery
 
       - pool all files into one
-        - 2025_01_06
+        - 2025-01-06
 
           ` ` ` powershell
           dir pool*.md -Exclude pool*Master.md |
