@@ -699,7 +699,12 @@ function Get-MarkdownTree {
                 }
                 elseif ($null -ne $snippet) {
                     $snippet.Lines += @(
-                        "$(' ' * ($TableRow.IndentLength - $snippet.Indent))$content"
+                        if ($content -match "^\s*$") {
+                            $content
+                        }
+                        else {
+                            "$(' ' * ($TableRow.IndentLength - $snippet.Indent))$content"
+                        }
                     )
 
                     return

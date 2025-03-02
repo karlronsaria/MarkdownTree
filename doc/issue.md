@@ -1,5 +1,53 @@
 # issue
 
+- [ ] 2025-03-01-173847
+  - where: ``Get-MarkdownTree``, ``Object.ps1``
+  - howto
+    - in markdown file ``howto-vim.md``
+
+      ```markdown
+      # howto: vim
+
+      - change encoding
+
+        ```text
+        :e ++enc=utf16
+
+        :e ++enc=utf16le
+        :w!
+        :e ++ff=mac
+        :setlocal ff=dos
+        :wq
+        ```
+      ```
+
+    - in powershell
+
+      ```powershell
+      Get-Item howto-vim.md | Get-Content | Get-MarkdownTree
+      ```
+
+    - actual
+
+      ```text
+      Line |
+       702 |  …           "$(' ' * ($TableRow.IndentLength - $snippet.Indent))$conten …
+           |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           | times ('-2') must be a non-negative value. (Parameter 'times') Actual value was -2.
+
+      howto
+      -----
+      @{vim=}
+      ```
+
+    - expected
+
+      ```text
+      howto
+      -----
+      @{vim=}
+      ```
+
 ## completed
 
 - [x] 2025-01-09-052828
