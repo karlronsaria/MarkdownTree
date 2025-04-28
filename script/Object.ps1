@@ -132,14 +132,22 @@ function Write-MarkdownTree {
 .SYNOPSIS
 f: tree -> str -> tree
 f: tree -> str -> str -> tree
+f: tree -> (tree -> bool) -> tree
+f: tree -> (tree -> bool) -> str -> tree
 #>
 function Find-Subtree {
+    [CmdletBinding(DefaultParameterSetName = 'ByPropertyName')]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         $InputObject,
 
+        [Parameter(ParameterSetName = 'ByPropertyName')]
         [String]
         $PropertyName,
+
+        [Parameter(ParameterSetName = 'ByScriptBlock')]
+        [ScriptBlock]
+        $Where,
 
         [String]
         $Parent
@@ -150,66 +158,112 @@ function Find-Subtree {
             return @()
         }
 
-        $subresults = @()
-
         switch ($InputObject) {
             { $InputObject -is [Array] } {
-                $i = 0
+                $params = switch ($PsCmdlet.ParameterSetName) {
+                    'ByPropertyName' {
+                        @{
+                            InputObject = $null
+                            PropertyName = $PropertyName
+                            Parent = $Parent
+                        }
+                    }
 
-                $subresults = @(while ($i -lt $InputObject.Count) {
-                    Find-Subtree `
-                        -InputObject $InputObject[$i] `
-                        -PropertyName $PropertyName `
-                        -Parent:$Parent
+                    'ByScriptBlock' {
+                        @{
+                            InputObject = $null
+                            'Where' = $Where
+                            Parent = $Parent
+                        }
+                    }
+                }
 
-                    $i = $i + 1
-                })
+                @($InputObject) |
+                    where { $_ } |
+                    foreach {
+                        $params.InputObject = $_
+                        Find-Subtree @params
+                    }
+
+                break
             }
 
             { $InputObject -is [PsCustomObject] } {
-                $properties = $InputObject.PsObject.Properties `
-                    | where {
+                $properties = $InputObject.PsObject.Properties |
+                    where {
                         'NoteProperty' -eq $_.MemberType
                     }
 
                 if ($null -eq $properties) {
-                    return $subresults
+                    @()
+                    break
                 }
 
-                $subresults += @( `
-                    if ($PropertyName -in $properties.Name) {
-                        if ($Parent) {
-                            [PsCustomObject]@{
-                                parent = $Parent
-                                child = $InputObject
+                switch ($PsCmdlet.ParameterSetName) {
+                    'ByScriptBlock' {
+                        $result = $InputObject | where $Where
+
+                        if ($result) {
+                            if ($Parent) {
+                                [PsCustomObject]@{
+                                    parent = $Parent
+                                    child = $result
+                                }
+                            }
+                            else {
+                                $result
                             }
                         }
-                        else {
-                            $InputObject
-                        }
-                    }
-                    else {
+
                         foreach ($property in $properties) {
                             $params = @{
                                 InputObject = $property.Value
-                                PropertyName = $PropertyName
-                            }
-
-                            if ($Parent) {
-                                $params | Add-Member `
-                                    -MemberType NoteProperty `
-                                    -Name Parent `
-                                    -Value $property.Name
+                                'Where' = $Where
                             }
 
                             Find-Subtree @params
                         }
-                    } `
-                )
+
+                        break
+                    }
+
+                    'ByPropertyName' {
+                        if ($PropertyName -in $properties.Name) {
+                            if ($Parent) {
+                                [PsCustomObject]@{
+                                    parent = $Parent
+                                    child = $InputObject
+                                }
+                            }
+                            else {
+                                $InputObject
+                            }
+                        }
+                        else {
+                            foreach ($property in $properties) {
+                                $params = @{
+                                    InputObject = $property.Value
+                                    PropertyName = $PropertyName
+                                }
+
+                                if ($Parent) {
+                                    $params | Add-Member `
+                                        -MemberType NoteProperty `
+                                        -Name Parent `
+                                        -Value $property.Name
+                                }
+
+                                Find-Subtree @params
+                            }
+                        }
+
+                        break
+                    }
+                }
+
+                break
             }
         }
-
-        return $subresults
     }
 }
 
