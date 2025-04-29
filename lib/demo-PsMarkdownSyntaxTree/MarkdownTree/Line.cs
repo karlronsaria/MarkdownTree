@@ -261,6 +261,11 @@ public static partial class Lines
                     }
 
                     break;
+                case TokenType.Text:
+                    break;
+                default:
+                    head = Add(head, [new Leaf(current)]);
+                    break;
             }
         }
 

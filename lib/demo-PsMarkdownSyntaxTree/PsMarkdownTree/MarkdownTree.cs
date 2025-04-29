@@ -15,6 +15,7 @@ namespace PsMarkdownTree;
  * - Value
  */
 
+// todo: Should be 'Get' or 'ConvertTo'
 [Cmdlet(VerbsCommon.New, "MarkdownTree")]
 public class NewMarkdownTreeCommand : Cmdlet
 {
@@ -23,6 +24,41 @@ public class NewMarkdownTreeCommand : Cmdlet
         Position = 0
     )]
     public string[] InputObject = [];
+
+    [Parameter()]
+    public SwitchParameter Full;
+
+    protected IList<string> _markdown = [];
+
+    protected override void BeginProcessing()
+    {
+        base.BeginProcessing();
+        _markdown = [];
+    }
+
+    protected override void ProcessRecord()
+    {
+        base.ProcessRecord();
+
+        foreach (var item in InputObject)
+            _markdown.Add(item);
+    }
+
+    protected override void EndProcessing()
+    {
+        base.EndProcessing();
+
+        foreach (var tree in Outline.Get(_markdown))
+        {
+            ITree worktree = tree is Outline outline
+                ? outline.Unfold().Merge()
+                : tree;
+
+            var obj = new PSObject();
+            AddProperty(obj, worktree);
+            WriteObject(obj);
+        }
+    }
 
     private void AddParentProperty(PSObject obj, IParent parent, string propertyName)
     {
@@ -47,7 +83,10 @@ public class NewMarkdownTreeCommand : Cmdlet
     private void AddProperty(PSObject obj, ITree tree)
     {
         if (tree is Outline outline)
-            AddOutlineProperty(obj, outline);
+            if (Full.IsPresent)
+                AddOutlineProperty(obj, outline);
+            else
+                AddParentProperty(obj, outline, outline.Name);
 
         if (tree is ActionItem actionItem)
             obj.Properties.Add(new PSNoteProperty("Completed", actionItem.Completed));
@@ -87,38 +126,6 @@ public class NewMarkdownTreeCommand : Cmdlet
         {
             obj.Members.Add(new PSNoteProperty("Value", segment.ToString().Trim()));
             obj.Members.Add(new PSNoteProperty("_Content", segment));
-        }
-    }
-
-    protected IList<string> _markdown = [];
-
-    protected override void BeginProcessing()
-    {
-        base.BeginProcessing();
-        _markdown = [];
-    }
-
-    protected override void ProcessRecord()
-    {
-        base.ProcessRecord();
-
-        foreach (var item in InputObject)
-            _markdown.Add(item);
-    }
-
-    protected override void EndProcessing()
-    {
-        base.EndProcessing();
-
-        foreach (var tree in Outline.Get(_markdown))
-        {
-            ITree worktree = tree is Outline outline
-                ? outline.Unfold().Merge()
-                : tree;
-
-            var obj = new PSObject();
-            AddProperty(obj, worktree);
-            WriteObject(obj);
         }
     }
 }

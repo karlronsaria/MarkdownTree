@@ -75,7 +75,7 @@ public class Token
             TokenType.CloseLink => ")", // )
             TokenType.WhiteSpace => Content,
             TokenType.Text => Content,
-            TokenType.EndOfLine => "EOL",
+            TokenType.EndOfLine => "", // "EOL",
             _ => throw new Exception("Unidentified token type"),
         };
 
@@ -274,6 +274,7 @@ public class Token
             };
 
         var token = Sequence(input, type, '`', next);
+
         var fail = new Token
         {
             Success = false,
