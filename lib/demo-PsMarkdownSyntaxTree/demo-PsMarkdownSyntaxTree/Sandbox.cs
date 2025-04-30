@@ -14,10 +14,10 @@ public class TestOutline
                 yield return $"{space}{e.Language}({str})";
         else if (tree is Table t)
         {
-            yield return     $"{space}TableHead ({t.Headings})";
+            yield return      $"{space}TableHead ({t.Headings})";
 
             foreach (Row row in t.Rows)
-                yield return $"{space}TableRow  ({row})";
+                yield return  $"{space}TableRow  ({row})";
         }
         else if (tree is Outline o)
             yield return $"{space}{o.LineType}({o.Name})";
@@ -27,9 +27,6 @@ public class TestOutline
                 foreach (string str in GetStrings(p, level + 1, indent))
                     yield return str;
     }
-
-
-
 
     public static void Write(IEnumerable<string> lines)
     {
@@ -45,8 +42,8 @@ public class TestOutline
     ) {
         string space = string.Concat(Enumerable.Repeat(" ", level * indentSize));
 
-        string box = tree.Properties.Match("Completed").Count != 0
-            ? (bool)tree.Properties["Completed"].Value
+        string box = tree.Properties.Match("_Completed").Count != 0
+            ? (bool)tree.Properties["_Completed"].Value
                 ? "[x] " : "[ ] "
             : string.Empty;
 
@@ -198,7 +195,7 @@ public class TestOutline
 
         if (tree is ActionItem actionItem)
         {
-            obj.Properties.Add(new PSNoteProperty("Completed", actionItem.Completed));
+            obj.Properties.Add(new PSNoteProperty("_Completed", actionItem.Completed));
             return;
         }
 

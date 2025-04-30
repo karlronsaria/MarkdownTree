@@ -38,7 +38,7 @@ public class WriteMarkdownTreeCommand : Cmdlet
         int indentSize = MarkdownTree.Parse.Outline.DEFAULT_INDENT_SIZE,
         int level = 0
     ) {
-        string space = string.Concat(Enumerable.Repeat(" ", level * indentSize));
+        string space = string.Empty;
 
         string box = tree.Properties.Match("_Completed").Count != 0
             ? (bool)tree.Properties["_Completed"].Value
@@ -51,6 +51,7 @@ public class WriteMarkdownTreeCommand : Cmdlet
             where p.Name != "_Completed"
             select p
         ) {
+            space = string.Concat(Enumerable.Repeat(" ", level * indentSize));
             WriteObject($"{space}- {box}{prop.Name}");
             space = string.Concat(Enumerable.Repeat(" ", (level + 1) * indentSize));
 

@@ -12,6 +12,8 @@
   - [x] Sparse PSObject tree
 - [ ] find subtree
 - [ ] foreach, where
+- [ ] list rather than merge
+  - works well with 'merge property'
 - [ ] merge property
   - needed for PsSchedule
 - [ ] mute property

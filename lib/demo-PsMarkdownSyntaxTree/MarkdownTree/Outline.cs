@@ -214,7 +214,7 @@ public class Outline : IParent, IMarkdownWritable
     public bool HeadEquivalent(Outline outline) =>
         LineType == outline.LineType && Name == outline.Name;
 
-    public Outline Merge()
+    public Outline MergeChildren()
     {
         IList<ITree> buckets = [];
 
@@ -247,6 +247,12 @@ public class Outline : IParent, IMarkdownWritable
         }
 
         Children = buckets;
+        return this;
+    }
+
+    public Outline Merge()
+    {
+        MergeChildren();
 
         foreach (ITree child in Children)
             if (child is Outline outline)
