@@ -79,6 +79,7 @@ public partial class LineClass
             {
                 Type = type,
             },
+
             LineType.Heading => new HeadingLineClass
             {
                 Type = type,

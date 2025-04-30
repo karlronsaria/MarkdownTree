@@ -1,19 +1,212 @@
 ﻿using MarkdownTree.Lex;
+using System.Buffers;
+using System.CodeDom.Compiler;
 using System.Text.RegularExpressions;
 
 namespace MarkdownTree.Parse;
+
+public interface IMarkdownWritable
+{
+    public IEnumerable<string> ToMarkdown(int level = 1, int indent = 0);
+}
 
 public class IParent : ITree
 {
     public IList<ITree> Children { get; set; } = [];
 }
 
-public class Outline : IParent
+public class Outline : IParent, IMarkdownWritable
 {
+    public const int DEFAULT_INDENT_SIZE = 2;
+    // public static int IndentSize { get; set; } = DEFAULT_INDENT_SIZE;
+
     public LineType LineType { get; set; } = LineType.Paragraph;
     public ISegment Content { get; set; } = new Leaf();
 
     public string Name => Content.ToString().Trim();
+
+    public static IEnumerable<string> HeadingToMarkdown(int level, ITree content)
+    {
+        yield return $"{string.Concat(Enumerable.Repeat("#", level))} {content.ToString()?.Trim()}";
+        yield return string.Empty;
+    }
+
+    public IEnumerable<string>
+    ContentAsMarkdown(int level = 1, int indent = 0) {
+        foreach (string line in ContentAsMarkdown(Content, LineType, level, indent))
+            yield return line;
+    }
+
+    public static IEnumerable<string>
+    ContentAsMarkdown(
+        ITree content,
+        LineType lineType,
+        int level = 1,
+        int indent = 0
+    ) {
+        if (lineType == LineType.Heading)
+        {
+            foreach (string line in HeadingToMarkdown(level, content))
+                yield return line;
+
+            yield break;
+        }
+
+        string lead = lineType switch
+        {
+            LineType.Vinculum => "---",
+            LineType.UnorderedList => "- ",
+            LineType.Define => ": ",
+            LineType.Local => "![",
+            _ => string.Empty,
+        };
+
+        string space = string.Concat(Enumerable.Repeat(" ", indent));
+        yield return $"{space}{lead}{content.ToString()?.Trim()}";
+    }
+
+    public IEnumerable<string> ChildrenAsMarkdown(int nextLevel, int indent, int indentSize)
+    {
+        int orderedListIndex = 0;
+        LineType prevType = LineType.None;
+        LineType parentLineType = LineType;
+        bool lastLineWhiteSpace = LineType == LineType.Heading;
+
+        foreach (var child in Children)
+        {
+            if (child is CodeBlock c)
+            {
+                foreach (string line in c.ToMarkdown(nextLevel, indent))
+                    yield return line;
+
+                lastLineWhiteSpace = true;
+                orderedListIndex = 0;
+                prevType = LineType.None;
+
+                foreach (ITree tree in c.Children)
+                    if (tree is IMarkdownWritable m)
+                        foreach (string line in m.ToMarkdown(nextLevel + 1, indent))
+                            yield return line;
+                    else
+                        foreach (string line in ContentAsMarkdown(tree, LineType.None, nextLevel + 1, indent))
+                            yield return line;
+
+                continue;
+            }
+
+            if (child is Table t)
+            {
+                foreach (string line in t.ToMarkdown(nextLevel, indent))
+                    yield return line;
+
+                lastLineWhiteSpace = true;
+                orderedListIndex = 0;
+                prevType = LineType.None;
+
+                foreach (ITree tree in t.Children)
+                    if (tree is IMarkdownWritable m)
+                        foreach (string line in m.ToMarkdown(nextLevel + 1, indent))
+                            yield return line;
+                    else
+                        foreach (string line in ContentAsMarkdown(tree, LineType.None, nextLevel + 1, indent))
+                            yield return line;
+
+                continue;
+            }
+
+            if (child is Outline o)
+            {
+                if (o.LineType == LineType.Heading)
+                {
+                    yield return string.Empty;
+
+                    foreach (string line in HeadingToMarkdown(nextLevel, o.Content))
+                        yield return line;
+
+                    lastLineWhiteSpace = true;
+                    indent = 0;
+                    orderedListIndex = 0;
+                    prevType = o.LineType;
+
+                    foreach (string str in o.ChildrenAsMarkdown(nextLevel + 1, indent, indentSize))
+                        yield return str;
+
+                    continue;
+                }
+
+                if (!lastLineWhiteSpace &&
+                    o.LineType == LineType.Local && prevType != LineType.Local ||
+                    o.LineType != LineType.Local && prevType == LineType.Local)
+                {
+                    yield return string.Empty;
+                }
+
+                string lead = string.Empty;
+
+                if (o.LineType == LineType.OrderedList)
+                {
+                    orderedListIndex++;
+                    lead = $"{orderedListIndex}. ";
+                }
+                else
+                {
+                    orderedListIndex = 0;
+
+                    lead = o.LineType switch
+                    {
+                        LineType.Vinculum => "---",
+                        LineType.UnorderedList => "- ",
+                        LineType.Define => ": ",
+                        LineType.Local => "![",
+                        _ => string.Empty,
+                    };
+                }
+
+                if (o is ActionItem a)
+                    lead = $"{lead}[{(a.Completed ? 'x' : ' ')}] ";
+
+                if (parentLineType == LineType.Heading)
+                    indent = 0;
+
+                string space = string.Concat(Enumerable.Repeat(" ", indent));
+                yield return $"{space}{lead}{o.Name}";
+
+                int nextIndent = 
+                    o.LineType == LineType.Heading
+                        ? 0
+                        : indent +
+                          (o.LineType == LineType.OrderedList && indentSize < 3
+                              ? 3 : indentSize);
+
+                prevType = o.LineType;
+
+                foreach (string str in o.ChildrenAsMarkdown(nextLevel + 1, nextIndent, indentSize))
+                    yield return str;
+            }
+
+            lastLineWhiteSpace = false;
+        }
+
+        if (prevType == LineType.Local)
+            yield return string.Empty;
+    }
+
+    public IEnumerable<string> ToMarkdown(int level = 1, int indentSize = DEFAULT_INDENT_SIZE)
+    {
+        foreach (string line in ContentAsMarkdown(level, indentSize))
+            yield return line;
+
+        int indent = 0;
+
+        if (LineType != LineType.Heading)
+            indent =
+                LineType != LineType.Heading &&
+                LineType == LineType.OrderedList && indentSize == 2
+                    ? 3 : indentSize;
+
+        foreach (string line in ChildrenAsMarkdown(level + 1, indent, indentSize))
+            yield return line;
+    }
 
     // note
     // - two outline items having the same line type and name but different overall types
@@ -326,16 +519,49 @@ public class ActionItem : Outline
     public bool Completed = false;
 }
 
-public class CodeBlock : IParent
+public class CodeBlock : IParent, IMarkdownWritable
 {
     public string Language { get; set; } = string.Empty;
     public IList<string> Lines { get; set; } = [];
+
+    public IEnumerable<string> ToMarkdown(int level, int nextIndent)
+    {
+        string space = string.Concat(Enumerable.Repeat(" ", nextIndent));
+
+        yield return string.Empty;
+        yield return $"{space}```{Language}";
+
+        foreach (string line in Lines)
+            yield return $"{space}{line}";
+
+        yield return $"{space}```";
+        yield return string.Empty;
+    }
 }
 
-public class Table : IParent
+public class Table : IParent, IMarkdownWritable
 {
     public Row Headings { get; set; } = [];
     public IList<Row> Rows { get; set; } = [];
+
+    public IEnumerable<string> ToMarkdown(int level, int nextIndent)
+    {
+        string space = string.Concat(Enumerable.Repeat(" ", nextIndent));
+
+        yield return string.Empty;
+        yield return $"{space}|{Headings}|";
+
+        string vinculum =
+            string.Join("|", [.. from h in Headings
+            select string.Concat(Enumerable.Repeat("-", h.ToString().Length))]);
+
+        yield return $"{space}|{vinculum}|";
+
+        foreach (Row row in Rows)
+            yield return $"{space}|{row}|";
+
+        yield return string.Empty;
+    }
 }
 
 public class Malformed : IParent;

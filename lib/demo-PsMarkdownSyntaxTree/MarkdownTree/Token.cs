@@ -320,6 +320,7 @@ public class Token
             };
 
         var token = Sequence(input, TokenType.Strike, '~', next);
+
         var fail = new Token
         {
             Success = false,
@@ -333,7 +334,7 @@ public class Token
             return fail;
 
         next = token.End;
-        success = Any(input, next) && input[next] == '~';
+        success = next < input.Length && input[next] == '~';
 
         if (!success)
             return fail;
