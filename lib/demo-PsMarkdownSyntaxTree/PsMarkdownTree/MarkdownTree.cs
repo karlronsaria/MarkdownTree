@@ -1,6 +1,5 @@
 ﻿using MarkdownTree.Parse;
 using System.Management.Automation;
-using System.Text.RegularExpressions;
 
 namespace PsMarkdownTree;
 
@@ -23,61 +22,19 @@ namespace PsMarkdownTree;
 )]
 public class FindMarkdownTreeCommand : PSCmdlet
 {
-    public delegate bool Predicate(object obj);
-
     [Parameter(
         ValueFromPipeline = true,
         Position = 0
     )]
-    // [Parameter(
-    //     ParameterSetName = "ByPropertyName"
-    // )]
-    // [Parameter(
-    //     ParameterSetName = "ByScriptBlock"
-    // )]
     public object[] InputObject = [];
 
-    [Parameter(
-        Position = 1
-    )]
-    [Parameter(
-        ParameterSetName = "ByScriptBlock"
-    )]
-    public Predicate? ScriptBlock;
+    [Parameter(Position = 1)]
+    [Parameter(ParameterSetName = "ByScriptBlock")]
+    public ScriptBlock? Where;
 
-    [Parameter(
-        Position = 1
-    )]
-    [Parameter(
-        ParameterSetName = "ByPropertyName"
-    )]
+    [Parameter(Position = 1)]
+    [Parameter(ParameterSetName = "ByPropertyName")]
     public string[] PropertyName = [];
-
-    private static IEnumerable<PSObject>
-    FindSubtree(PSObject psobject, Predicate predicate)
-    {
-        if (predicate(psobject))
-            yield return psobject;
-
-        foreach (var property in psobject.Properties)
-            if (property.Value is PSObject subtree)
-                foreach (var value in FindSubtree(subtree, predicate))
-                    yield return value;
-    }
-
-    private static IEnumerable<object>
-    FindSubtree(PSObject psobject, string[] propertyName)
-    {
-        foreach (var property in psobject.Properties)
-        {
-            if (propertyName.Contains(property.Name))
-                yield return property.Value;
-
-            if (property.Value is PSObject subtree)
-                foreach (var value in FindSubtree(subtree, propertyName))
-                    yield return value;
-        }
-    }
 
     protected override void ProcessRecord()
     {
@@ -105,15 +62,15 @@ public class FindMarkdownTreeCommand : PSCmdlet
 
                 break;
             case "ByScriptBlock":
-                ScriptBlock ??= _ => true;
+                Where ??= ScriptBlock.Create("return $true");
 
                 foreach (object item in InputObject)
                 {
                     IEnumerable<object> list = item switch
                     {
-                        PSObject psobject => FindSubtree(psobject, ScriptBlock),
-                        Branching root => root.WhereAll(x => ScriptBlock(x)),
-                        _ => ScriptBlock(item) ? [item] : [],
+                        PSObject psobject => FindSubtree(psobject, Where),
+                        Branching root => root.WhereAll(x => InvokeAsPredicate(x, Where)),
+                        _ => InvokeAsPredicate(item, Where) ? [item] : [],
                     };
 
                     foreach (var subtree in list)
@@ -121,6 +78,42 @@ public class FindMarkdownTreeCommand : PSCmdlet
                 }
 
                 break;
+        }
+    }
+
+    private static bool
+    InvokeAsPredicate(object psobject, ScriptBlock scriptBlock)
+    {
+        var result = scriptBlock.Invoke(psobject);
+        bool confirm = result is not null && result.Count > 0 && LanguagePrimitives.IsTrue(result[0]);
+        return confirm;
+    }
+
+    private static IEnumerable<object>
+    FindSubtree(PSObject psobject, ScriptBlock predicate)
+    {
+        foreach (var property in psobject.Properties)
+        {
+            if (InvokeAsPredicate(property.Name, predicate))
+                yield return property.Value;
+
+            if (property.Value is PSObject subtree)
+                foreach (var value in FindSubtree(subtree, predicate))
+                    yield return value;
+        }
+    }
+
+    private static IEnumerable<object>
+    FindSubtree(PSObject psobject, string[] propertyName)
+    {
+        foreach (var property in psobject.Properties)
+        {
+            if (propertyName.Contains(property.Name))
+                yield return property.Value;
+
+            if (property.Value is PSObject subtree)
+                foreach (var value in FindSubtree(subtree, propertyName))
+                    yield return value;
         }
     }
 }
@@ -475,31 +468,32 @@ public class GetMarkdownTreeCommand : Cmdlet
     {
         AddTreeProperty(obj, outline, outline.Name);
         obj.Properties.Add(new PSNoteProperty("_LineType", outline.LineType));
-        obj.Properties.Add(new PSNoteProperty("_Content", outline.Content));
+        obj.Properties.Add(new PSNoteProperty("_Content", outline));
     }
 
     private static bool ConvertLeafToString(PSObject obj, Outline outline)
     {
-        if (outline.Children.Count == 1)
+        if (outline.Children.Count != 1)
+            return false;
+
+        var child = outline.Children[0];
+
+        // [!] note: Branching type accepts code blocks, tables, and action items
+        if (child is Outline p && p.Children.Count == 0)
         {
-            var child = outline.Children[0];
+            string value = child is Outline o
+                ? o.Name
+                : child.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
 
-            // [!] note: Branching type accepts code blocks, tables, and action items
-            if (child is Outline p && p.Children.Count == 0)
-            {
-                string value = child is Outline o
-                    ? o.Name
-                    : child.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
+            obj.Properties.Add(new PSNoteProperty(outline.Name, value));
+            return true;
+        }
 
-                obj.Properties.Add(new PSNoteProperty(outline.Name, value));
-                return true;
-            }
-            else if (child is ISegment s)
-            {
-                string value = s.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
-                obj.Properties.Add(new PSNoteProperty(outline.Name, value));
-                return true;
-            }
+        if (child is ISegment s)
+        {
+            string value = s.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
+            obj.Properties.Add(new PSNoteProperty(outline.Name, value));
+            return true;
         }
 
         return false;
@@ -516,11 +510,10 @@ public class GetMarkdownTreeCommand : Cmdlet
                 AddOutlineProperty(obj, outline);
             else
                 AddTreeProperty(obj, outline, outline.Name);
-        }
 
-        if (tree is ActionItem actionItem)
-        {
-            obj.Properties.Add(new PSNoteProperty("_Completed", actionItem.Completed));
+            if (outline is ActionItem actionItem)
+                obj.Properties.Add(new PSNoteProperty("_Completed", actionItem.Completed));
+
             return;
         }
 

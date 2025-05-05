@@ -35,8 +35,9 @@ public abstract class Branching : ITree
             yield return this;
 
         foreach (ITree child in Children)
-            if (predicate(child))
-                yield return child;
+            if (child is Branching branch)
+                foreach (ITree subchild in branch.WhereAll(predicate))
+                    yield return subchild;
     }
 
     public delegate T Callback<T>(ITree tree);
