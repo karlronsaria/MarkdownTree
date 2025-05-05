@@ -11,12 +11,12 @@
   - [x] Full PSObject tree
   - [x] Sparse PSObject tree
 - [ ] find subtree
-- [ ] foreach, where
-- [ ] list rather than merge
+- [x] foreach, where
+- [x] list rather than merge
   - works well with 'merge property'
-- [ ] merge property
+- [x] merge property
   - needed for PsSchedule
-- [ ] mute property
-- [ ] fold property
+- [x] mute property
+- [x] fold property
 - [ ] rotate property
 

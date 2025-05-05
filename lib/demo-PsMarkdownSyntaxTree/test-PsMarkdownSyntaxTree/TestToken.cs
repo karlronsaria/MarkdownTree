@@ -67,6 +67,56 @@ public class TestToken
                     "EndOfLine[]",
                 ]
             ),
+            (
+                "- replay <",
+                [
+                    "UnorderedList[- ]",
+                    "Text[replay ]",
+                    "Text[<]",
+                    "EndOfLine[]",
+                ]
+            ),
+            (
+                "- replay <- what the heck is this?",
+                [
+                    "UnorderedList[- ]",
+                    "Text[replay ]",
+                    "Text[<- what the heck is this?]",
+                    "EndOfLine[]",
+                ]
+            ),
+            (
+                "![2025-04-06-183044](./res/2025-04-06-183044.png)",
+                [
+                    "ImageMacro[![]",
+                    "Text[2025-04-06-183044]",
+                    "CloseBox[]]",
+                    "OpenLink[(]",
+                    "Text[./res/2025-04-06-183044.png]",
+                    "CloseLink[)]",
+                    "EndOfLine[]",
+                ]
+            ),
+            (
+                "![2025-04-06-183044](<./res/2025-04-06-183044.png>)",
+                [
+                    "ImageMacro[![]",
+                    "Text[2025-04-06-183044]",
+                    "CloseBox[]]",
+                    "OpenLink[(]",
+                    "Hyperlink[./res/2025-04-06-183044.png]",
+                    "CloseLink[)]",
+                    "EndOfLine[]",
+                ]
+            ),
+            (
+                "- ``/Python31X/``",
+                [
+                    "UnorderedList[- ]",
+                    "InlineCode[/Python31X/]",
+                    "EndOfLine[]",
+                ]
+            ),
         ];
 
         foreach ((string mock, var expected) in data)

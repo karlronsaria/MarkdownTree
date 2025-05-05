@@ -18,7 +18,7 @@ public class TestLineClass
             ("- Hello, Mario",               new { indent = 0, type = LineType.UnorderedList }),
             ("  - Hello, Mario",             new { indent = 2, type = LineType.UnorderedList }),
             ("    1. Hello, Mario",          new { indent = 4, type = LineType.OrderedList }),
-            ("       ![est](./res/est.png)", new { indent = 7, type = LineType.Local }),
+            ("       ![est](./res/est.png)", new { indent = 7, type = LineType.ImageMacro }),
             ("       ```javascript",         new { indent = 7, type = LineType.CodeBlock, language = "javascript" }),
             ("       ```",                   new { indent = 7, type = LineType.CodeBlock, language = "" }),
             ("    2. Hello, Mario",          new { indent = 4, type = LineType.OrderedList }),

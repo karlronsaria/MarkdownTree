@@ -1,4 +1,5 @@
 ﻿using MarkdownTree.Lex;
+using System.Diagnostics.Contracts;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -60,6 +61,11 @@ public class LinkText : ISegment
     public override string ToString() => $"[{Box.ToString()}]({Link.ToString()})";
 }
 
+public class ImageMacro : LinkText
+{
+    public override string ToString() => $"!{base.ToString()}";
+}
+
 public class Text : ISegment
 {
     public string Content { get; set; } = string.Empty;
@@ -79,6 +85,18 @@ public static partial class Lines
                 break;
             case LineType.WhiteSpace:
                 head = new WhiteSpaceLine();
+                break;
+            case LineType.ImageMacro:
+                _ = tokens.MoveNext();
+                (head, _) = GetLinkText(tokens, moveNext: false); // todo
+
+                if (head is LinkText linkText)
+                    head = new ImageMacro
+                    {
+                        Box = linkText.Box,
+                        Link = linkText.Link,
+                    };
+
                 break;
             default:
                 head = Get(tokens);
@@ -164,13 +182,13 @@ public static partial class Lines
     }
 
     public static (ISegment, IEnumerator<Token>?)
-    GetLinkText(IEnumerator<Token> tokens)
+    GetLinkText(IEnumerator<Token> tokens, bool moveNext = true)
     {
         ISegment fail = new Leaf(tokens.Current);
         ((Leaf)fail).Type = TokenType.Text;
 
         IList<ISegment> box = [];
-        bool any = tokens.MoveNext();
+        bool any = !moveNext || tokens.MoveNext();
 
         while (any && tokens.Current.Type != TokenType.CloseBox)
         {

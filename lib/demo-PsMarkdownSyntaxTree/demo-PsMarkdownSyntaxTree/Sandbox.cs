@@ -5,7 +5,7 @@ namespace demo_PsMarkdownSyntaxTree;
 
 public class TestOutline
 {
-    public static IEnumerable<string> GetStrings(IParent tree, int level = 0, int indent = 2)
+    public static IEnumerable<string> GetStrings(Branching tree, int level = 0, int indent = 2)
     {
         string space = string.Concat(Enumerable.Repeat(" ", level * indent));
         
@@ -23,7 +23,7 @@ public class TestOutline
             yield return $"{space}{o.LineType}({o.Name})";
 
         foreach (var child in tree.Children)
-            if (child is IParent p)
+            if (child is Branching p)
                 foreach (string str in GetStrings(p, level + 1, indent))
                     yield return str;
     }
@@ -37,7 +37,7 @@ public class TestOutline
     public static void
     Write(
         PSObject tree,
-        int indentSize = MarkdownTree.Parse.Outline.DEFAULT_INDENT_SIZE,
+        int indentSize = IMarkdownWritable.DEFAULT_INDENT_SIZE,
         int level = 0
     ) {
         string space = string.Concat(Enumerable.Repeat(" ", level * indentSize));
@@ -118,7 +118,7 @@ public class TestOutline
         foreach (var tree in Outline.Get(_markdown))
         {
             ITree worktree = tree is Outline outline
-                ? outline.Unfold().Merge()
+                ? outline.Unfold().CascadeMerge()
                 : tree;
 
             var obj = new PSObject();
@@ -129,7 +129,7 @@ public class TestOutline
 
     public const string MISSING_NAME_MESSAGE = "_MissingName";
 
-    private void AddTreeProperty(PSObject obj, IParent tree, string propertyName)
+    private void AddTreeProperty(PSObject obj, Branching tree, string propertyName)
     {
         PSObject subobj = new();
 
@@ -160,7 +160,7 @@ public class TestOutline
         {
             var child = outline.Children[0];
 
-            if (child is IParent p && p.Children.Count == 0)
+            if (child is Branching p && p.Children.Count == 0)
             {
                 string value = child is Outline o
                     ? o.Name

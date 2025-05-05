@@ -10,7 +10,7 @@ public enum LineType
     OrderedList,
     TableRow,
     Define,
-    Local,
+    ImageMacro,
     CodeBlock,
     WhiteSpace,
     Paragraph,
@@ -29,7 +29,7 @@ public partial class LineClass
         OrderedList,
         TableRow,
         Define,
-        Local,
+        ImageMacro,
         CodeBlock,
         WhiteSpace,
         Paragraph,
@@ -165,7 +165,7 @@ public partial class LineClass
     private static partial Regex Define();
 
     [GeneratedRegex(@"^(?<indent>\s*)!\[")]
-    private static partial Regex Local();
+    private static partial Regex ImageMacro();
 
     [GeneratedRegex(@"^(?<indent>\s*)```(?<language>\S*)")]
     private static partial Regex CodeBlock();

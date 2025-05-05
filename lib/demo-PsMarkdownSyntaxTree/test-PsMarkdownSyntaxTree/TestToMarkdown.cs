@@ -10,7 +10,76 @@ public class TestToMarkdown
     }
 
     [Test]
-    public void Test1()
+    public void Test_Unfold_MergeOnProperty_ConvertToMarkdown()
+    {
+        IList<(IList<string>, IList<string>)> data = [
+            (
+                [
+                    "# sched: est",
+                    "- when: sat",
+                    "- where: home",
+                    "# sched: uan",
+                    "- when: sun",
+                    "- where: home",
+                    "# sched: sin",
+                    "- when: mon",
+                    "- where: work",
+                ],
+                [
+                    "# sched",
+                    "",
+                    "- est",
+                    "  - when",
+                    "    - sat",
+                    "  - where",
+                    "    - home",
+                    "- uan",
+                    "  - when",
+                    "    - sun",
+                    "  - where",
+                    "    - home",
+                    "- sin",
+                    "  - when",
+                    "    - mon",
+                    "  - where",
+                    "    - work",
+                ]
+            ),
+        ];
+
+        int mockIndex = 0;
+
+        foreach ((IList<string> mock, IList<string> expected) in data)
+        {
+            IList<ITree> forest =
+                [.. from o in Outline.Get(mock)
+                    where o is Outline
+                    select ((Outline)o).CascadeUnfold() as ITree];
+
+            forest = Outline.Merge(forest);
+
+            forest =
+                [.. from o in forest
+                    where o is Outline
+                    select ((Outline)o).MergeChildren(c => ((Outline)c).Name == "sched")];
+
+            IList<string> actual =
+                [.. from tree in forest
+                    where tree is IMarkdownWritable
+                    from string s in ((IMarkdownWritable)tree).ToMarkdown()
+                    select s];
+
+            Assert.That(actual, Has.Count.EqualTo(expected.Count), $"ToMarkdown Item Count {mockIndex}");
+
+            for (int i = 0; i < actual.Count; i++)
+                Assert.That(actual[i], Is.EqualTo(expected[i]), $"ToMarkdown {mockIndex} Line {i}");
+
+            mockIndex++;
+        }
+    }
+
+    [Test]
+    public void TestOutlineToMarkdown()
     {
         IList<(IList<string>, IList<string>)> data = [
             (
@@ -82,7 +151,7 @@ public class TestToMarkdown
                     "![image](<./res/image.png>)",
                     "",
                 ]
-            )
+            ),
         ];
 
         foreach ((IList<string> mock, IList<string> expected) in data)

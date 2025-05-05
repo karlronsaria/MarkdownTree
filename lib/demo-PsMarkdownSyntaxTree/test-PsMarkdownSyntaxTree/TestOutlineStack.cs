@@ -4,7 +4,7 @@ namespace test_PsMarkdownSyntaxTree;
 
 public class TestOutlineStack
 {
-    public class TestTree : IParent
+    public class TestTree : Branching
     {
         public required string Name { get; set; }
 

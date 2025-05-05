@@ -5,80 +5,130 @@ using MarkdownTree.Lex;
 using MarkdownTree.Parse;
 
 using System.Management.Automation;
-
-// Console.WriteLine("Hello, world!");
+using System.Management.Automation.Runspaces;
 
 IList<string> doc;
 
 doc = [
-    "# 2025-03-27",
-    "",
-    "- [ ] emp: CodeNinjas: task",
-    "  - every: day",
-    "  - with journal",
-    "  - download 1 lesson from CsFirst",
-    "  - link",
-    "    - url: <https://csfirst.withgoogle.com/c/cs-first/en/curriculum.html>",
-    "    - login",
-    "      - mail: <cnladera@gmail.com>",
-    "    - retrieved: 2025-03-27",
-    "  - ~~define~~"
+    "# est",
+    "- uan",
+    "  - sin",
+    "    - est",
+    "      - It's all",
+    "  - est",
+    "    - I have",
+
+    // "# the",
+    // "- define",
+    // "  - what",
+    // "  - note: ``Ctl + B``: System Tray, **Show Hidden Icons**",
+    // "  - issue 2025-04-06-183038",
+    // "    - where: ScanSnap Home",
+    // "    - actual",
+
+    // "![2025-04-06-183044](./res/2025-04-06-183044.png)",
+    // "- replay <- what the heck is this?",
+    // "- replay <",
+    // "- ``/Python31X/``",
+    // "  ```markdown",
+    // "  # todo",
+    // "",
+    // "  - [ ] connect: show Matt",
+    // "",
+    // "    ![20250220_161533.jpg](../res/20250220_161533.jpg)",
+    // "    ![20250220_161533.jpg](../res/20250220_161533.jpg)",
+    // "  ```",
+    // "  | est | uan | sin |",
+    // "  |-----|-----|-----|",
+    // "  | ter | ius | ira |",
+    // "  | veh | eme | nti |",
+
+
+    // "- ![2025-04-06-183044](./res/2025-04-06-183044.png)",
+    // "- ![2025-04-06-183129](./res/2025-04-06-183129.png)",
+    // "- ![2025-04-06-183943](./res/2025-04-06-183943.png)",
+    // "- ![2025-04-06-184257](./res/2025-04-06-184257.png)",
+
+    // "    | est | uan | sin |",
+    // "    |-----|-----|-----|",
+    // "    | ter | ius | ira |",
+    // "    | veh | eme | nti |",
+    // "  - [2025-02-12](link)",
 ];
 
-// doc = [
-//     "# est",
-//     "![image](<./res/image.png>)",
-//     "- what",
-//     "- the",
-//     "  1. est uan sin",
-//     "     ![image](<./res/image.png>)",
-//     "  2. [ ] ter ius ira",
-//     "     ![image2](<./res/image2.png>)",
-//     "     ![image3](<./res/image3.png>)",
-//     "  3. veh eme nti",
-//     "     ![image4](<./res/image4.png>)",
-//     "  4. sep hir oth",
-//     "- he",
-//     "  1. est uan sin",
-//     "  2. ter ius ira",
-//     "     | est | uan | sin |",
-//     "     | --- | --- | --- |",
-//     "     | ter | ius | ira |",
-//     "     | veh | eme | nti |",
-//     "     ![image](<./res/image.png>)",
-//     "- it",
-//     "- just",
-//     "- works",
-//     "## uan",
-//     "![image](<./res/image.png>)",
-// ];
 
-foreach (var str in 
-    from o in Outline.Get(doc)
-    where o is Outline
-    from string s in ((Outline)o) .Unfold() .Merge() .ToMarkdown()
+
+using PowerShell powershell = PowerShell.Create();
+var initialSessionState = InitialSessionState.CreateDefault();
+
+initialSessionState.Commands.Add(new SessionStateCmdletEntry(
+    "Get-MarkdownTree",
+    typeof(PsMarkdownTree.GetMarkdownTreeCommand),
+    ""
+));
+
+initialSessionState.Commands.Add(new SessionStateCmdletEntry(
+    "Write-MarkdownTree",
+    typeof(PsMarkdownTree.WriteMarkdownTreeCommand),
+    ""
+));
+
+initialSessionState.Commands.Add(new SessionStateCmdletEntry(
+    "Find-MarkdownTree",
+    typeof(PsMarkdownTree.FindMarkdownTreeCommand),
+    ""
+));
+
+using var runspace = RunspaceFactory.CreateRunspace(initialSessionState);
+
+runspace.Open();
+powershell.Runspace = runspace;
+
+powershell.AddScript("$input").Invoke();
+powershell.Commands.Clear();
+powershell.AddCommand("Get-MarkdownTree");
+
+var collection = powershell.Invoke(doc);
+
+powershell.AddScript("$input").Invoke();
+powershell.Commands.Clear();
+powershell.AddCommand("Write-MarkdownTree");
+
+powershell.AddScript("$input").Invoke();
+powershell.Commands.Clear();
+powershell.AddCommand("Find-MarkdownTree");
+powershell.AddParameter("PropertyName", new List<string> { "est" });
+
+foreach (var line in powershell.Invoke(collection))
+    Console.WriteLine(line);
+
+
+
+
+/*
+IList<ITree> forest =
+    [.. from o in Outline.Get(doc)
+//         where o is Outline
+//         select ((Outline)o).CascadeUnfold() as ITree];
+        select o];
+
+// forest = Outline.Merge(forest);
+// 
+// forest =
+//     [.. from o in forest
+//         where o is Outline
+//         select ((Outline)o).MergeChildren(c => ((Outline)c).Name == "sched")];
+
+foreach (string line in
+    from tree in forest
+    where tree is IMarkdownWritable
+    from s in ((IMarkdownWritable)tree).ToMarkdown()
     select s
 ) {
-    Console.WriteLine(str);
+    Console.WriteLine(line);
 }
+*/
 
-// foreach (var tree in Outline.Get(doc))
-// {
-//     ITree worktree = tree is Outline outline
-//         ? outline.Unfold().Merge()
-//         : tree;
-// 
-//     var obj = new PSObject();
-//     (new TestOutline()).AddProperty(obj, worktree);
-//     TestOutline.Write(obj);
-// }
 
-// foreach (var str in
-//     from o in Outline.Get(doc)
-//     where o is Outline
-//     from string s in TestOutline.GetStrings(((Outline)o) .Unfold() .Merge() ) // .Fold() .Unfold() )
-//     select s
-// ) {
-//     Console.WriteLine(str);
-// }
+
 

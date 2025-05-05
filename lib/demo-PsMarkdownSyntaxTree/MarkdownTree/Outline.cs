@@ -1,25 +1,57 @@
 ﻿using MarkdownTree.Lex;
-using System.Buffers;
-using System.CodeDom.Compiler;
 using System.Text.RegularExpressions;
 
 namespace MarkdownTree.Parse;
 
 public interface IMarkdownWritable
 {
-    public IEnumerable<string> ToMarkdown(int level = 1, int indent = 0);
+    public const int DEFAULT_INDENT_SIZE = 2;
+
+    public IEnumerable<string> ToMarkdown();
+    public IEnumerable<string> ToMarkdown(int level, int indent);
 }
 
-public class IParent : ITree
+public abstract class Branching : ITree
 {
     public IList<ITree> Children { get; set; } = [];
+
+    public delegate bool Predicate(ITree tree);
+
+    public ITree? WhereFirst(Predicate predicate)
+    {
+        if (predicate(this))
+            return this;
+
+        foreach (ITree child in Children)
+            if (predicate(child))
+                return child;
+
+        return null;
+    }
+
+    public IEnumerable<ITree> WhereAll(Predicate predicate)
+    {
+        if (predicate(this))
+            yield return this;
+
+        foreach (ITree child in Children)
+            if (predicate(child))
+                yield return child;
+    }
+
+    public delegate T Callback<T>(ITree tree);
+
+    public IEnumerable<T> ForEach<T>(Callback<T> callback)
+    {
+        yield return callback(this);
+
+        foreach (ITree child in Children)
+            yield return callback(child);
+    }
 }
 
-public class Outline : IParent, IMarkdownWritable
+public class Outline : Branching, IMarkdownWritable
 {
-    public const int DEFAULT_INDENT_SIZE = 2;
-    // public static int IndentSize { get; set; } = DEFAULT_INDENT_SIZE;
-
     public LineType LineType { get; set; } = LineType.Paragraph;
     public ISegment Content { get; set; } = new Leaf();
 
@@ -57,7 +89,8 @@ public class Outline : IParent, IMarkdownWritable
             LineType.Vinculum => "---",
             LineType.UnorderedList => "- ",
             LineType.Define => ": ",
-            LineType.Local => "![",
+            // // (karlr 2025-05-04): This conflicts with inline ImageMacro
+            // LineType.ImageMacro => "![",
             _ => string.Empty,
         };
 
@@ -135,8 +168,8 @@ public class Outline : IParent, IMarkdownWritable
                 }
 
                 if (!lastLineWhiteSpace &&
-                    o.LineType == LineType.Local && prevType != LineType.Local ||
-                    o.LineType != LineType.Local && prevType == LineType.Local)
+                    o.LineType == LineType.ImageMacro && prevType != LineType.ImageMacro ||
+                    o.LineType != LineType.ImageMacro && prevType == LineType.ImageMacro)
                 {
                     yield return string.Empty;
                 }
@@ -157,7 +190,8 @@ public class Outline : IParent, IMarkdownWritable
                         LineType.Vinculum => "---",
                         LineType.UnorderedList => "- ",
                         LineType.Define => ": ",
-                        LineType.Local => "![",
+                        // // (karlr 2025-05-04): This conflicts with inline ImageMacro
+                        // LineType.ImageMacro => "![",
                         _ => string.Empty,
                     };
                 }
@@ -187,11 +221,13 @@ public class Outline : IParent, IMarkdownWritable
             lastLineWhiteSpace = false;
         }
 
-        if (prevType == LineType.Local)
+        if (prevType == LineType.ImageMacro)
             yield return string.Empty;
     }
 
-    public IEnumerable<string> ToMarkdown(int level = 1, int indentSize = DEFAULT_INDENT_SIZE)
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
+
+    public IEnumerable<string> ToMarkdown(int level, int indentSize)
     {
         foreach (string line in ContentAsMarkdown(level, indentSize))
             yield return line;
@@ -214,13 +250,15 @@ public class Outline : IParent, IMarkdownWritable
     public bool HeadEquivalent(Outline outline) =>
         LineType == outline.LineType && Name == outline.Name;
 
-    public Outline MergeChildren()
+    // public delegate bool Predicate(Outline outline);
+
+    public static IList<ITree> Merge(IList<ITree> forest, Predicate predicate)
     {
         IList<ITree> buckets = [];
 
-        foreach (ITree child in Children)
+        foreach (ITree child in forest)
         {
-            if (child is Outline outline)
+            if (child is Outline outline && predicate(outline))
             {
                 int index = 0;
 
@@ -246,17 +284,41 @@ public class Outline : IParent, IMarkdownWritable
             }
         }
 
-        Children = buckets;
+        return buckets;
+    }
+
+    public static IList<ITree> Merge(IList<ITree> forest) => Merge(forest, _ => true);
+
+    public Outline MergeChildren(Predicate predicate)
+    {
+        Children = Merge(Children, predicate);
         return this;
     }
 
-    public Outline Merge()
+    public Outline MergeChildren()
     {
-        MergeChildren();
+        Children = Merge(Children);
+        return this;
+    }
+
+    public Outline CascadeMerge(Predicate predicate)
+    {
+        _ = MergeChildren(predicate);
 
         foreach (ITree child in Children)
             if (child is Outline outline)
-                outline.Merge();
+                outline.CascadeMerge(predicate);
+
+        return this;
+    }
+
+    public Outline CascadeMerge()
+    {
+        _ = MergeChildren();
+
+        foreach (ITree child in Children)
+            if (child is Outline outline)
+                outline.CascadeMerge();
 
         return this;
     }
@@ -264,13 +326,17 @@ public class Outline : IParent, IMarkdownWritable
     public bool IsNonLeaf() =>
         Children.Count > 0 || LineType == LineType.UnorderedList;
 
-    public Outline Fold()
+    public Outline Fold(Predicate predicate)
     {
         ISegment left = Content;
         ITree rootPtr = this;
 
-        while (Children.Count == 1 && Children[0] is Outline trivial && trivial.IsNonLeaf())
-        {
+        while (
+            predicate(this) &&
+            Children.Count == 1 &&
+            Children[0] is Outline trivial &&
+            trivial.IsNonLeaf()
+        ) {
             left = new Colon
             {
                 Left = left is Colon c
@@ -280,32 +346,48 @@ public class Outline : IParent, IMarkdownWritable
             };
 
             if (rootPtr is Outline o)
-            {
                 o.Content = left;
-            }
             else if (rootPtr is Colon d)
-            {
                 d.Right = left;
-            }
 
             rootPtr = left;
             Children = trivial.Children;
         }
 
+        return this;
+    }
+
+    public Outline Fold() => Fold(_ => true);
+
+    public Outline CascadeFold()
+    {
+        _ = Fold();
+
         foreach (var child in Children)
             if (child is Outline o)
-                _ = o.Fold();
+                _ = o.CascadeFold();
 
         return this;
     }
 
-    public Outline Unfold()
+    public Outline CascadeFold(Predicate predicate)
+    {
+        _ = Fold(predicate);
+
+        foreach (var child in Children)
+            if (child is Outline o)
+                _ = o.CascadeFold(predicate);
+
+        return this;
+    }
+
+    public Outline Unfold(Predicate predicate)
     {
         Outline tail = this;
         ISegment cursor = Content;
         var tempChildren = Children;
 
-        while (cursor is Colon c)
+        while (predicate(tail) && cursor is Colon c)
         {
             tail.Content = c.Left;
 
@@ -321,15 +403,36 @@ public class Outline : IParent, IMarkdownWritable
 
         tail.Content = cursor;
         tail.Children = tempChildren;
+        return tail;
+    }
+
+    public Outline Unfold() => Unfold(_ => true);
+
+    public Outline CascadeUnfold(Predicate predicate)
+    {
+        Outline tail = Unfold(predicate);
 
         foreach (var child in tail.Children)
             if (child is Outline o)
-                _ = o.Unfold();
+                _ = o.CascadeUnfold(predicate);
 
         return this;
     }
 
-    public static IEnumerable<ITree> Get(IEnumerable<string> lines)
+    public Outline CascadeUnfold()
+    {
+        Outline tail = Unfold();
+
+        foreach (var child in tail.Children)
+            if (child is Outline o)
+                _ = o.CascadeUnfold();
+
+        return this;
+    }
+
+    public static IEnumerable<ITree> Get(IEnumerable<string> lines) => Get(lines, _ => true);
+
+    public static IEnumerable<ITree> Get(IEnumerable<string> lines, Predicate whereOutline)
     {
         TreeDepth depth = new();
         OutlineStack stack = new();
@@ -343,7 +446,7 @@ public class Outline : IParent, IMarkdownWritable
             if (lineClass is WhiteSpaceLineClass)
                 continue;
 
-            IParent branch;
+            Branching branch;
 
             if (lineClass is CodeBlockLineClass codeBlockLine)
             {
@@ -381,7 +484,12 @@ public class Outline : IParent, IMarkdownWritable
                 var tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
 
                 if (branch is Outline o)
+                {
                     o.Content = Lines.Get(lineClass.Type, new Enumerator<Token>([.. tokens]));
+
+                    if (!whereOutline(o))
+                        continue;
+                }
             }
 
             if (lineClass is HeadingLineClass c)
@@ -407,7 +515,7 @@ public class Outline : IParent, IMarkdownWritable
             yield return tree;
     }
 
-    public static (IParent, IEnumerator<string>)
+    public static (Branching, IEnumerator<string>)
     GetTable(IEnumerator<string> lines, LineClass lineClass)
     {
         string line = lines.Current;
@@ -466,7 +574,7 @@ public class Outline : IParent, IMarkdownWritable
                 lines = backtracker;
         }
 
-        IParent branch = new Table
+        Branching branch = new Table
         {
             Headings = headings,
             Rows = rows,
@@ -475,17 +583,17 @@ public class Outline : IParent, IMarkdownWritable
         return (branch, lines);
     }
 
-    public static (IParent, IEnumerator<string>)
+    public static (Branching, IEnumerator<string>)
     GetCodeBlock(IEnumerator<string> lines, CodeBlockLineClass lineClass)
     {
         int firstIndent = lineClass.Indent;
         IList<string> codeLines = [];
-        IParent codeBlock;
+        Branching codeBlock;
 
         while (lines.MoveNext())
         {
             string line = lines.Current;
-            Match indentCapture = (new Regex($"^ {{0,{firstIndent}}}")).Match(line);
+            Match indentCapture = new Regex($"^ {{0,{firstIndent}}}").Match(line);
             int leadIndent = indentCapture.Length;
             string code = line[leadIndent..];
 
@@ -525,10 +633,12 @@ public class ActionItem : Outline
     public bool Completed = false;
 }
 
-public class CodeBlock : IParent, IMarkdownWritable
+public class CodeBlock : Branching, IMarkdownWritable
 {
     public string Language { get; set; } = string.Empty;
     public IList<string> Lines { get; set; } = [];
+
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
@@ -545,10 +655,12 @@ public class CodeBlock : IParent, IMarkdownWritable
     }
 }
 
-public class Table : IParent, IMarkdownWritable
+public class Table : Branching, IMarkdownWritable
 {
     public Row Headings { get; set; } = [];
     public IList<Row> Rows { get; set; } = [];
+
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
@@ -570,7 +682,7 @@ public class Table : IParent, IMarkdownWritable
     }
 }
 
-public class Malformed : IParent;
+public class Malformed : Branching;
 
 public class TreeDepth()
 {
@@ -701,7 +813,7 @@ public class OutlineStack : Stack<(IList<ITree>, ITree?)>
         }
         else
         {
-            if (prevTail is IParent parent)
+            if (prevTail is Branching parent)
             {
                 foreach (var item in list)
                     parent.Children.Add(item);

@@ -9,7 +9,7 @@ public class TestOutline
     {
     }
 
-    private static IEnumerable<string> GetStrings(IParent tree, int level = 0, int indent = 2)
+    private static IEnumerable<string> GetStrings(Branching tree, int level = 0, int indent = 2)
     {
         string space = string.Concat(Enumerable.Repeat(" ", level * indent));
         
@@ -27,7 +27,7 @@ public class TestOutline
             yield return $"{space}{o.LineType}({o.Name})";
 
         foreach (var child in tree.Children)
-            if (child is IParent p)
+            if (child is Branching p)
                 foreach (string str in GetStrings(p, level + 1, indent))
                     yield return str;
     }
@@ -557,8 +557,8 @@ public class TestOutline
             var expectedMerged,
             var expectedRefolded,
             var expectedReunfolded
-        ) in data)
-        {
+        ) in data
+        ) {
             IList<string> actual =
                 [.. from o in Outline.Get(mock)
                 where o is Outline
@@ -573,7 +573,7 @@ public class TestOutline
             actual =
                 [.. from o in Outline.Get(mock)
                 where o is Outline
-                from string s in GetStrings(((Outline)o).Unfold())
+                from string s in GetStrings(((Outline)o).CascadeUnfold())
                 select s];
 
             Assert.That(actual, Has.Count.EqualTo(expectedUnfolded.Count), $"Unfolded outline tree count {mockIndex}");
@@ -584,7 +584,7 @@ public class TestOutline
             actual =
                 [.. from o in Outline.Get(mock)
                 where o is Outline
-                from string s in GetStrings(((Outline)o).Unfold().Merge())
+                from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge())
                 select s];
 
             Assert.That(actual, Has.Count.EqualTo(expectedMerged.Count), $"Merged outline tree count");
@@ -595,7 +595,7 @@ public class TestOutline
             actual =
                 [.. from o in Outline.Get(mock)
                 where o is Outline
-                from string s in GetStrings(((Outline)o).Unfold().Merge().Fold())
+                from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge().CascadeFold())
                 select s];
 
             Assert.That(actual, Has.Count.EqualTo(expectedRefolded.Count), $"Refolded merged outline tree count {mockIndex}");
@@ -606,7 +606,7 @@ public class TestOutline
             actual =
                 [.. from o in Outline.Get(mock)
                 where o is Outline
-                from string s in GetStrings(((Outline)o).Unfold().Merge().Fold().Unfold())
+                from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge().CascadeFold().CascadeUnfold())
                 select s];
 
             Assert.That(actual, Has.Count.EqualTo(expectedReunfolded.Count), $"Unfolded, merged, folded, and unfolded outline tree count {mockIndex}");
@@ -617,5 +617,92 @@ public class TestOutline
             mockIndex++;
         }
     }
+
+    [Test]
+    public void TestConvertToMarkdown()
+    {
+        IList<(IList<string>, IList<string>)>
+        data = [
+            (
+                [
+                    "# 2025-03-27",
+                    "",
+                    "- [ ] emp: CompanyName: task",
+                    "  - every: day",
+                    "  - with journal",
+                    "  - download 1 lesson from CsFirst",
+                    "  - link",
+                    "    - url: <https://csfirst.withgoogle.com/c/cs-first/en/curriculum.html>",
+                    "    - login",
+                    "      - mail: <me.me@gmail.com>",
+                    "    - retrieved: 2025-03-27",
+                    "  - ~~define~~"
+                ],
+                [
+                    "# 2025-03-27",
+                    "",
+                    "- [ ] emp: CompanyName: task",
+                    "  - every: day",
+                    "  - with journal",
+                    "  - download 1 lesson from CsFirst",
+                    "  - link",
+                    "    - url: <https://csfirst.withgoogle.com/c/cs-first/en/curriculum.html>",
+                    "    - login",
+                    "      - mail: <me.me@gmail.com>",
+                    "    - retrieved: 2025-03-27",
+                    "  - ~~define~~",
+                ]
+            )
+        ];
+
+        int mockIndex = 0;
+
+        foreach ((IList<string> mock, IList<string> expected) in data)
+        {
+            IList<string> actual =
+                [.. from o in Outline.Get(mock)
+                    where o is Outline
+                    from string s in ((Outline)o).ToMarkdown()
+                    select s];
+
+            Assert.That(actual, Has.Count.EqualTo(expected.Count), $"ToMarkdown count {mockIndex}");
+
+            for (int i = 0; i < (int)Math.Min(actual.Count, expected.Count); ++i)
+                Assert.That(actual[i], Is.EqualTo(expected[i]), $"ToMarkdown {i}");
+
+            mockIndex++;
+        }
+    }
+
+    /*
+    [Test]
+    public void TestDropBranch()
+    {
+        IList<(IList<string>, IList<string>)>
+        data = [
+            (
+                [
+                    "# sched: est",
+                    "- when: sat",
+                    "- where: home",
+                    "# sched: uan",
+                    "- when: sun",
+                    "- where: home",
+                    "# sched: sin",
+                    "- when: mon",
+                    "- where: work",
+                ],
+                [
+                ]
+            )
+        ];
+
+    }
+    */
 }
+
+
+
+
+
 

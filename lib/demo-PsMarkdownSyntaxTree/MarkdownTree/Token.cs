@@ -219,6 +219,18 @@ public class Token
             }
             else
             {
+                if (start > textStart)
+                {
+                    yield return new Token
+                    {
+                        Success = true,
+                        Type = TokenType.Text,
+                        Content = input[textStart..start], // (start + 1)
+                        Start = textStart,
+                        End = start,
+                    };
+                }
+
                 yield return new Token
                 {
                     Success = true,
@@ -229,6 +241,8 @@ public class Token
                 };
 
                 textStart = token.End;
+                start = token.End;
+                continue;
             }
 
             start = token.End;
@@ -288,7 +302,7 @@ public class Token
             return fail;
 
         next = token.End;
-        success = Any(input, next) && input[next] == '`';
+        success = next < input.Length /*Any(input, next)*/ && input[next] == '`';
 
         if (!success)
             return fail;
@@ -367,7 +381,9 @@ public class Token
         {
             Success = success,
             Type = type,
-            Content = input[next..end],
+            Content = input[
+                (success ? next : start) .. (!success && end < input.Length ? end + 1 : end)
+            ], // end],
             Start = start,
 
             // <est uan sin>
@@ -414,6 +430,9 @@ public class Token
 
     public static (bool, int) Consume(string input, int start, Predicate predicate)
     {
+        if (start == input.Length)
+            return (false, start);
+
         bool fail;
 
         while ((fail = predicate(input[start])) && Any(input, start))
