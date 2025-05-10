@@ -5,7 +5,7 @@ namespace test_PsMarkdownSyntaxTree;
 
 public class TestToken
 {
-    private static string TestString(LineClass lex)
+    private static string TestString(Line lex)
     {
         string content = lex.Capture?.Value ?? string.Empty;
 
@@ -122,7 +122,7 @@ public class TestToken
         foreach ((string mock, var expected) in data)
         {
             int index = 0;
-            var lex = LineClass.Get(mock);
+            var lex = Line.Get(mock);
 
             string content = TestString(lex);
             Assert.That(content, Is.EqualTo(expected[index++]));

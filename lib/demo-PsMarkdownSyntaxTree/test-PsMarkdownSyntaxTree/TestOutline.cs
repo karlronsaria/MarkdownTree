@@ -11,7 +11,7 @@ public class TestOutline
 
     private static IEnumerable<string> GetStrings(Branching tree, int level = 0, int indent = 2)
     {
-        string space = string.Concat(Enumerable.Repeat(" ", level * indent));
+        string space = string.Concat(Enumerable.Repeat(' ', level * indent));
         
         if (tree is CodeBlock e)
             foreach (string str in e.Lines)

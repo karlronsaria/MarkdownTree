@@ -38,7 +38,7 @@ public class TestLineClass
 
         foreach (var (text, expected) in mock)
         {
-            var sublex = LineClass.Get(text);
+            var sublex = Line.Get(text);
 
             var indent = expected
                 .GetType()
@@ -99,7 +99,7 @@ public class TestLineClass
 
                 if (sublex.Actionable)
                 {
-                    (int statusNumber, var boxCapture) = LineClass.GetStatus(content);
+                    (int statusNumber, var boxCapture) = Line.GetStatus(content);
 
                     if (boxCapture.Success)
                     {

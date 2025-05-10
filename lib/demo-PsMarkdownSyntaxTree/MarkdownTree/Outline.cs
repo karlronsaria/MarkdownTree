@@ -11,9 +11,10 @@ public interface IMarkdownWritable
     public IEnumerable<string> ToMarkdown(int level, int indent);
 }
 
-public abstract class Branching : ITree
+public abstract class Branching(int lineNumber) : ITree
 {
     public IList<ITree> Children { get; set; } = [];
+    public int LineNumber { get; set; } = lineNumber;
 
     public delegate bool Predicate(ITree tree);
 
@@ -51,7 +52,7 @@ public abstract class Branching : ITree
     }
 }
 
-public class Outline : Branching, IMarkdownWritable
+public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 {
     public LineType LineType { get; set; } = LineType.Paragraph;
     public ISegment Content { get; set; } = new Leaf();
@@ -60,7 +61,7 @@ public class Outline : Branching, IMarkdownWritable
 
     public static IEnumerable<string> HeadingToMarkdown(int level, ITree content)
     {
-        yield return $"{string.Concat(Enumerable.Repeat("#", level))} {content.ToString()?.Trim()}";
+        yield return $"{string.Concat(Enumerable.Repeat('#', level))} {content.ToString()?.Trim()}";
         yield return string.Empty;
     }
 
@@ -95,7 +96,7 @@ public class Outline : Branching, IMarkdownWritable
             _ => string.Empty,
         };
 
-        string space = string.Concat(Enumerable.Repeat(" ", indent));
+        string space = string.Concat(Enumerable.Repeat(' ', indent));
         yield return $"{space}{lead}{content.ToString()?.Trim()}";
     }
 
@@ -203,7 +204,7 @@ public class Outline : Branching, IMarkdownWritable
                 if (parentLineType == LineType.Heading)
                     indent = 0;
 
-                string space = string.Concat(Enumerable.Repeat(" ", indent));
+                string space = string.Concat(Enumerable.Repeat(' ', indent));
                 yield return $"{space}{lead}{o.Name}";
 
                 int nextIndent = 
@@ -392,7 +393,7 @@ public class Outline : Branching, IMarkdownWritable
         {
             tail.Content = c.Left;
 
-            Outline branch = new()
+            Outline branch = new(LineNumber)
             {
                 LineType = LineType.UnorderedList,
             };
@@ -439,10 +440,14 @@ public class Outline : Branching, IMarkdownWritable
         OutlineStack stack = new();
         IEnumerator<string> e = new NonStandardEnumerator<string>([.. lines], () => string.Empty);
 
+        // Advance enumerator
         while (e.MoveNext())
         {
+            // Enumerator Current used
             string line = e.Current;
-            LineClass lineClass = LineClass.Get(line);
+
+            // Line class
+            Line lineClass = Line.Get(line);
 
             if (lineClass is WhiteSpaceLineClass)
                 continue;
@@ -451,6 +456,7 @@ public class Outline : Branching, IMarkdownWritable
 
             if (lineClass is CodeBlockLineClass codeBlockLine)
             {
+                // Enumerator passed
                 (branch, e) = GetCodeBlock((IEnumerator<string>)e.Clone(), codeBlockLine);
 
                 if (branch is Malformed malformed)
@@ -461,6 +467,7 @@ public class Outline : Branching, IMarkdownWritable
             }
             else if (lineClass.Type == LineType.TableRow)
             {
+                // Enumerator passed
                 (branch, e) = GetTable((IEnumerator<string>)e.Clone(), lineClass);
 
                 if (branch is Malformed malformed)
@@ -471,13 +478,14 @@ public class Outline : Branching, IMarkdownWritable
             }
             else
             {
+                // Branch created
                 branch = lineClass.Actionable && lineClass.Status > -1
-                    ? new ActionItem
+                    ? new ActionItem(e.Index())
                     {
                         LineType = lineClass.Type,
                         Completed = lineClass.Status == 1,
                     }
-                    : new Outline
+                    : new Outline(e.Index())
                     {
                         LineType = lineClass.Type,
                     };
@@ -486,7 +494,7 @@ public class Outline : Branching, IMarkdownWritable
 
                 if (branch is Outline o)
                 {
-                    o.Content = Lines.Get(lineClass.Type, new Enumerator<Token>([.. tokens]));
+                    o.Content = Segments.Get(lineClass.Type, new Enumerator<Token>([.. tokens]));
 
                     if (!whereOutline(o))
                         continue;
@@ -499,7 +507,8 @@ public class Outline : Branching, IMarkdownWritable
             }
             else if (!depth.Next(lineClass.Indent))
             {
-                yield return new Malformed { Children = [branch] };
+                // Branch created
+                yield return new Malformed(e.Index()) { Children = [branch] };
                 yield break;
             }
 
@@ -517,55 +526,72 @@ public class Outline : Branching, IMarkdownWritable
     }
 
     public static (Branching, IEnumerator<string>)
-    GetTable(IEnumerator<string> lines, LineClass lineClass)
+    GetTable(IEnumerator<string> lines, Line lineClass)
     {
         string line = lines.Current;
         var tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
-        (ISegment s, _) = Lines.GetRow(new Enumerator<Token>([.. tokens]));
+        (ISegment s, _) = Segments.GetRow(new Enumerator<Token>([.. tokens]));
 
         if (s is not Row)
-            return (new Malformed { Children = [s] }, lines);
+            // Branch created
+            return (new Malformed(lines.Index()) { Children = [s] }, lines);
 
         Row headings = (Row)s;
-        _ = lines.MoveNext();
-        line = lines.Current;
-        lineClass = LineClass.Get(line);
-        tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
-        bool isRowSeparator = Lines.IsRowSeparator(new Enumerator<Token>([.. tokens]));
 
+        // Advance enumerator
+        _ = lines.MoveNext();
+
+        // Enumerator Current used
+        line = lines.Current;
+
+        // Line class
+        lineClass = Line.Get(line);
+        tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
+        bool isRowSeparator = Segments.IsRowSeparator(new Enumerator<Token>([.. tokens]));
+
+        // Advance enumerator
         while (!isRowSeparator && lines.MoveNext())
         {
+            // Enumerator Current used
             line = lines.Current;
-            lineClass = LineClass.Get(line);
+
+            // Line class
+            lineClass = Line.Get(line);
 
             if (
                 lineClass.Type != LineType.TableRow
                 && lineClass.Type != LineType.WhiteSpace
             )
-                return (new Malformed { Children = [s] }, lines);
+                // Branch created
+                return (new Malformed(lines.Index()) { Children = [s] }, lines);
 
             tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
-            isRowSeparator = Lines.IsRowSeparator(new Enumerator<Token>([.. tokens]));
+            isRowSeparator = Segments.IsRowSeparator(new Enumerator<Token>([.. tokens]));
         }
 
         bool isTablePart = true;
         IEnumerator<string> backtracker;
         IList<Row> rows = [];
 
+        // Advance enumerator
         while ((backtracker = (IEnumerator<string>)lines.Clone()).MoveNext() && isTablePart)
         {
+            // Enumerator Current used
             line = backtracker.Current;
-            lineClass = LineClass.Get(line);
+
+            // Line class
+            lineClass = Line.Get(line);
 
             if (lineClass.Type == LineType.TableRow)
             {
                 tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
-                (s, _) = Lines.GetRow(new Enumerator<Token>([.. tokens]));
+                (s, _) = Segments.GetRow(new Enumerator<Token>([.. tokens]));
 
                 if (s is Row row)
                     rows.Add(row);
                 else
-                    return (new Malformed { Children = [s] }, lines);
+                    // Branch created
+                    return (new Malformed(lines.Index()) { Children = [s] }, lines);
             }
 
             isTablePart = lineClass.Type == LineType.TableRow
@@ -575,7 +601,8 @@ public class Outline : Branching, IMarkdownWritable
                 lines = backtracker;
         }
 
-        Branching branch = new Table
+        // Branch created
+        Branching branch = new Table(lines.Index())
         {
             Headings = headings,
             Rows = rows,
@@ -591,8 +618,12 @@ public class Outline : Branching, IMarkdownWritable
         IList<string> codeLines = [];
         Branching codeBlock;
 
+        // Advance enumerator
         while (lines.MoveNext())
         {
+            // No line class identified
+            // All lines are treated as code until an EndCodeBlock line is found
+
             string line = lines.Current;
             Match indentCapture = new Regex($"^ {{0,{firstIndent}}}").Match(line);
             int leadIndent = indentCapture.Length;
@@ -600,7 +631,8 @@ public class Outline : Branching, IMarkdownWritable
 
             if (leadIndent == firstIndent && code == "```")
             {
-                codeBlock = new CodeBlock
+                // Branch created
+                codeBlock = new CodeBlock(lines.Index())
                 {
                     Language = lineClass.Language,
                     Lines = codeLines,
@@ -614,10 +646,11 @@ public class Outline : Branching, IMarkdownWritable
             }
         }
 
-        codeBlock = new Malformed
+        // Branch created
+        codeBlock = new Malformed(lines.Index())
         {
             Children = [
-                new CodeBlock
+                new CodeBlock(lines.Index())
                 {
                     Language = lineClass.Language,
                     Lines = codeLines,
@@ -629,12 +662,12 @@ public class Outline : Branching, IMarkdownWritable
     }
 }
 
-public class ActionItem : Outline
+public class ActionItem(int lineNumber) : Outline(lineNumber)
 {
     public bool Completed = false;
 }
 
-public class CodeBlock : Branching, IMarkdownWritable
+public class CodeBlock(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 {
     public string Language { get; set; } = string.Empty;
     public IList<string> Lines { get; set; } = [];
@@ -643,7 +676,7 @@ public class CodeBlock : Branching, IMarkdownWritable
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
-        string space = string.Concat(Enumerable.Repeat(" ", nextIndent));
+        string space = string.Concat(Enumerable.Repeat(' ', nextIndent));
 
         yield return string.Empty;
         yield return $"{space}```{Language}";
@@ -656,7 +689,7 @@ public class CodeBlock : Branching, IMarkdownWritable
     }
 }
 
-public class Table : Branching, IMarkdownWritable
+public class Table(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 {
     public Row Headings { get; set; } = [];
     public IList<Row> Rows { get; set; } = [];
@@ -665,14 +698,14 @@ public class Table : Branching, IMarkdownWritable
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
-        string space = string.Concat(Enumerable.Repeat(" ", nextIndent));
+        string space = string.Concat(Enumerable.Repeat(' ', nextIndent));
 
         yield return string.Empty;
         yield return $"{space}|{Headings}|";
 
         string vinculum =
             string.Join("|", [.. from h in Headings
-            select string.Concat(Enumerable.Repeat("-", h.ToString().Length))]);
+            select string.Concat(Enumerable.Repeat('-', h.ToString().Length))]);
 
         yield return $"{space}|{vinculum}|";
 
@@ -683,7 +716,7 @@ public class Table : Branching, IMarkdownWritable
     }
 }
 
-public class Malformed : Branching;
+public class Malformed(int lineNumber) : Branching(lineNumber);
 
 public class TreeDepth()
 {
@@ -825,8 +858,11 @@ public class OutlineStack : Stack<(IList<ITree>, ITree?)>
             {
                 base.Push((prevList, prevTail));
 
+                int lineNumber = list.First() is Branching b
+                    ? b.LineNumber : -1;
+
                 // return malformed branch
-                return ([], new Malformed { Children = list });
+                return ([], new Malformed(lineNumber) { Children = list });
             }
         }
 

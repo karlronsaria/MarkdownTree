@@ -1,300 +1,191 @@
-﻿using MarkdownTree.Lex;
-using System.Diagnostics.Contracts;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-namespace MarkdownTree.Parse;
+namespace MarkdownTree;
 
-public interface IEnumerator<T> : System.Collections.Generic.IEnumerator<T>, ICloneable;
-
-public interface ITree;
-
-public interface ISegment : ITree
+public enum LineType
 {
-    public string ToString();
+    Heading,
+    Vinculum,
+    UnorderedList,
+    OrderedList,
+    TableRow,
+    Define,
+    ImageMacro,
+    CodeBlock,
+    WhiteSpace,
+    Paragraph,
+    None, // Error type
 }
 
-public class WhiteSpaceLine : ISegment
+public partial class Line
 {
-    public override string ToString() => string.Empty;
-}
+    public delegate Regex MatchLine();
 
-public class MalformedSegment(ITree tree) : ISegment
-{
-    public ITree Tree = tree;
-    public override string ToString() => base.ToString() ?? string.Empty;
-}
+    public static IList<MatchLine> LineMatches =>
+    [
+        Heading,
+        Vinculum,
+        UnorderedList,
+        OrderedList,
+        TableRow,
+        Define,
+        ImageMacro,
+        CodeBlock,
+        WhiteSpace,
+        Paragraph,
+    ];
 
-public class Leaf : Token, ISegment
-{
-    public Leaf() : base() { }
-    public Leaf(Token token) : base(token) { }
-    public override string ToString() => base.ToString() ?? string.Empty;
-}
+    public LineType Type { get; set; } = LineType.Paragraph;
+    public bool Actionable { get; set; } = false;
+    public int Status { get; set; } = -1;
+    public int NextIndentSize { get; set; } = 2;
+    public int Length { get; set; } = 0;
+    public int Indent { get; set; } = 0;
+    public Match? Capture { get; set; }
 
-public class Sequence : List<ISegment>, ISegment
-{
-    public Sequence() { }
-    public Sequence(IList<ISegment> trees) : base(trees) { }
-
-    public override string ToString() =>
-        string.Join(string.Empty, from i in this select i.ToString());
-}
-
-public class Row : Sequence
-{
-    public override string ToString() =>
-        string.Join('|', from i in this select i.ToString());
-}
-
-public class Colon : ISegment
-{
-    public required ISegment Left { get; set; }
-    public required ISegment Right { get; set; }
-    public override string ToString() => $"{Left.ToString()}: {Right.ToString()}";
-}
-
-public class LinkText : ISegment
-{
-    public required ISegment Box { get; set; }
-    public required ISegment Link { get; set; }
-    public override string ToString() => $"[{Box.ToString()}]({Link.ToString()})";
-}
-
-public class ImageMacro : LinkText
-{
-    public override string ToString() => $"!{base.ToString()}";
-}
-
-public class Text : ISegment
-{
-    public string Content { get; set; } = string.Empty;
-    public override string ToString() => Content;
-}
-
-public static partial class Lines
-{
-    public static ISegment Get(LineType lineType, IEnumerator<Token> tokens)
+    public static (int, Match) GetStatus(string text)
     {
-        ISegment? head;
+        Match capture = Checkbox().Match(text);
 
-        switch (lineType)
+        return !capture.Success
+            ? (-1, capture)
+            : capture.Groups["status"].Value switch
+              {
+                  " " => (0, capture),
+                  "x" => (1, capture),
+                  _ => (-1, capture),
+              };
+    }
+
+    public static Line Get(string text)
+    {
+        int i = 0;
+        bool success = false;
+        Match? capture = null;
+
+        while (!success && i < LineMatches.Count)
         {
-            case LineType.TableRow:
-                (head, _) = GetRow(tokens);
-                break;
-            case LineType.WhiteSpace:
-                head = new WhiteSpaceLine();
-                break;
-            case LineType.ImageMacro:
-                _ = tokens.MoveNext();
-                (head, _) = GetLinkText(tokens, moveNext: false); // todo
-
-                if (head is LinkText linkText)
-                    head = new ImageMacro
-                    {
-                        Box = linkText.Box,
-                        Link = linkText.Link,
-                    };
-
-                break;
-            default:
-                head = Get(tokens);
-                break;
+            capture = LineMatches[i]().Match(text);
+            success = capture.Success;
+            ++i;
         }
 
-        return head ?? new Leaf();
-    }
+        LineType type = (LineType)(Enum.GetValues<LineType>().GetValue(i - 1) ?? LineType.Paragraph);
+        int nextStart = capture?.Length ?? 0;
 
-    public delegate bool Predicate(Token token);
-
-    public static ISegment
-    Add(ISegment? root, ISegment branch)
-    {
-        if (root is null)
-            return root = branch;
-
-        if (root is not Sequence)
-            root = new Sequence([root]);
-
-        ((Sequence) root).Add(branch);
-        return root;
-    }
-
-    public static ISegment?
-    Add(ISegment? root, IEnumerable<ISegment> branches)
-    {
-        foreach (ISegment branch in branches)
-            root = Add(root, branch);
-
-        return root;
-    }
-
-    public static ISegment?
-    Get(IEnumerator<Token> tokens)
-    {
-        (_, ISegment? head) = Get(tokens, t => true);
-        return head;
-    }
-
-    public static bool
-    IsRowSeparator(IEnumerator<Token> tokens)
-    {
-        (var segment, _) = GetRow(tokens);
-
-        if (segment is null)
-            return false;
-
-        if (segment is Row row)
-            foreach (var cell in row)
-                if (!(TableVinculum()).IsMatch(cell.ToString()))
-                    return false;
-
-        return true;
-    }
-
-    public static (ISegment, IEnumerator<Token>?)
-    GetRow(IEnumerator<Token> tokens)
-    {
-        Row row = [];
-        Sequence cell = [];
-
-        (bool success, ISegment? branch) = Get(tokens, t => t.Type != TokenType.Bar);
-
-        while (success) // &= tokens.MoveNext())
+        var lineClass = type switch
         {
-            if (branch is ISegment inline)
-                cell.Add(inline);
-
-            if (tokens.Current.Type == TokenType.Bar)
+            LineType.WhiteSpace => new WhiteSpaceLineClass
             {
-                if (cell.Count > 0)
-                {
-                    row.Add(cell);
-                    cell = [];
-                }
-            }
-
-            (success, branch) = Get(tokens, t => t.Type != TokenType.Bar);
-        }
-
-        return (row, tokens);
-    }
-
-    public static (ISegment, IEnumerator<Token>?)
-    GetLinkText(IEnumerator<Token> tokens, bool moveNext = true)
-    {
-        ISegment fail = new Leaf(tokens.Current);
-        ((Leaf)fail).Type = TokenType.Text;
-
-        IList<ISegment> box = [];
-        bool any = !moveNext || tokens.MoveNext();
-
-        while (any && tokens.Current.Type != TokenType.CloseBox)
-        {
-            box.Add(new Leaf(tokens.Current));
-            any = tokens.MoveNext();
-        }
-
-        if (!any)
-            return (fail, null);
-
-        any = tokens.MoveNext();
-
-        if (!any || tokens.Current.Type != TokenType.OpenLink)
-            return (fail, null);
-
-        IList<ISegment> link = [];
-        any = tokens.MoveNext();
-
-        while (any && tokens.Current.Type != TokenType.CloseLink)
-        {
-            link.Add(new Leaf(tokens.Current));
-            any = tokens.MoveNext();
-        }
-
-        if (!any)
-            return (fail, null);
-
-        return (
-            new LinkText
-            {
-                Box = new Sequence(box),
-                Link = new Sequence(link),
+                Type = type,
             },
-            null
-        );
-    }
 
-    public static (bool, ISegment?)
-    Get(IEnumerator<Token> tokens, Predicate predicate)
-    {
-        StringBuilder textBuilder = new();
-        ISegment? head = null;
-        Token current;
-        bool fail = true;
+            LineType.Heading => new HeadingLineClass
+            {
+                Type = type,
+                Level = capture?.Groups["hashes"].Length ?? 0,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = nextStart,
+                Capture = capture,
+            },
 
-        while (tokens.MoveNext() && (fail = predicate(tokens.Current)))
+            LineType.CodeBlock => new CodeBlockLineClass
+            {
+                Type = type,
+                Language = capture?.Groups["language"].Value ?? string.Empty,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = nextStart,
+                Capture = capture,
+            },
+
+            LineType.UnorderedList => new Line
+            {
+                Type = type,
+                Actionable = true,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = nextStart,
+                Capture = capture,
+            },
+
+            LineType.OrderedList => new Line
+            {
+                Type = type,
+                Actionable = true,
+                NextIndentSize = 3,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = nextStart,
+                Capture = capture,
+            },
+
+            LineType.Paragraph => new Line
+            {
+                Type = type,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = capture?.Groups["indent"].Length ?? 0,
+                Capture = capture,
+            },
+
+            _ => new Line
+            {
+                Type = type,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = nextStart,
+                Capture = capture,
+            }
+        };
+
+        if (lineClass.Actionable)
         {
-            current = tokens.Current;
-
-            switch (current.Type)
-            {
-                case TokenType.Text:
-                    textBuilder.Append(current.Content);
-                    break;
-                default:
-                    if (textBuilder.Length > 0)
-                    {
-                        head = Add(head, [new Text
-                        {
-                            Content = textBuilder.ToString(),
-                        }]);
-
-                        textBuilder = new();
-                    }
-
-                    break;
-            }
-
-            switch (current.Type)
-            {
-                case TokenType.Colon:
-                    (_, ISegment? tempHead) = Get(tokens, predicate);
-
-                    head = new Colon
-                    {
-                        Left = head ?? new Leaf(),
-                        Right = tempHead ?? new Leaf(),
-                    };
-
-                    break;
-                case TokenType.Box:
-                    (ISegment branch, var e) = GetLinkText((IEnumerator<Token>)tokens.Clone());
-
-                    if (e is IEnumerator<Token> f)
-                    {
-                        tokens = f;
-                        head = Add(head, [branch]);
-                    }
-
-                    break;
-                case TokenType.Text:
-                    break;
-                default:
-                    head = Add(head, [new Leaf(current)]);
-                    break;
-            }
+            (lineClass.Status, Match boxCapture) = GetStatus(text[lineClass.Length..]);
+            lineClass.Length += boxCapture?.Length ?? 0;
         }
 
-        head = textBuilder.Length > 0
-            ? Add(head, [new Text { Content = textBuilder.ToString() }])
-            : head;
-
-        return (!fail, head);
+        return lineClass;
     }
 
-    [GeneratedRegex(@"\s*:?\s*\-+\s*:?\s*")]
-    private static partial Regex TableVinculum();
+    [GeneratedRegex(@"^\s*\[(?<status>[^\[\]])\]\s")]
+    private static partial Regex Checkbox();
+
+    [GeneratedRegex(@"^(?<hashes>#+)\s")]
+    private static partial Regex Heading();
+
+    [GeneratedRegex(@"(?<indent>^\s*)(-|=|\*|_){3}")]
+    private static partial Regex Vinculum();
+
+    [GeneratedRegex(@"^(?<indent>\s*)(?<bullet>-|\+|\*)\s")]
+    private static partial Regex UnorderedList();
+
+    [GeneratedRegex(@"^(?<indent>\s*)(?<number>[1-9][0-9]*)\.\s")]
+    private static partial Regex OrderedList();
+
+    [GeneratedRegex(@"^(?<indent>\s*)\|")]
+    private static partial Regex TableRow();
+
+    [GeneratedRegex(@"^(?<indent>\s+):\s")]
+    private static partial Regex Define();
+
+    [GeneratedRegex(@"^(?<indent>\s*)!\[")]
+    private static partial Regex ImageMacro();
+
+    [GeneratedRegex(@"^(?<indent>\s*)```(?<language>\S*)")]
+    private static partial Regex CodeBlock();
+
+    [GeneratedRegex(@"^(?<indent>\s*)$")]
+    private static partial Regex WhiteSpace();
+
+    [GeneratedRegex(@"^(?<indent>\s*).*$")]
+    private static partial Regex Paragraph();
 }
+
+public class CodeBlockLineClass : Line
+{
+    public string Language { get; set; } = string.Empty;
+}
+
+public class HeadingLineClass : Line
+{
+    public int Level { get; set; }
+}
+
+public class WhiteSpaceLineClass : Line;
 

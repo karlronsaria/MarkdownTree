@@ -21,6 +21,8 @@ public class NonStandardEnumerator<T>(IList<T> list, OrDefault<T> orDefault) : M
     object IEnumerator.Current => _list[_index] ?? orDefault();
 #pragma warning restore CS8603 // Possible null reference return.
 
+    public int Index() => _index;
+
     public object Clone() => new NonStandardEnumerator<T>(_list, orDefault) { _index = _index };
 
     public void Dispose() { }
@@ -45,6 +47,8 @@ public class Enumerator<T>(IList<T> list) : MarkdownTree.Parse.IEnumerator<T>, I
     public T Current => _list[_index];
 
     object IEnumerator.Current => _list[_index] ?? new T();
+
+    public int Index() => _index;
 
     public object Clone() => new Enumerator<T>(_list) { _index = _index };
 

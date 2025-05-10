@@ -7,7 +7,7 @@ public class TestOutline
 {
     public static IEnumerable<string> GetStrings(Branching tree, int level = 0, int indent = 2)
     {
-        string space = string.Concat(Enumerable.Repeat(" ", level * indent));
+        string space = string.Concat(Enumerable.Repeat(' ', level * indent));
         
         if (tree is CodeBlock e)
             foreach (string str in e.Lines)
@@ -40,7 +40,7 @@ public class TestOutline
         int indentSize = IMarkdownWritable.DEFAULT_INDENT_SIZE,
         int level = 0
     ) {
-        string space = string.Concat(Enumerable.Repeat(" ", level * indentSize));
+        string space = string.Concat(Enumerable.Repeat(' ', level * indentSize));
 
         string box = tree.Properties.Match("_Completed").Count != 0
             ? (bool)tree.Properties["_Completed"].Value

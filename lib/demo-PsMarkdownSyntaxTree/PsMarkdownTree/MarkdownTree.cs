@@ -169,7 +169,7 @@ public class WriteMarkdownTreeCommand : Cmdlet
         int indentSize = IMarkdownWritable.DEFAULT_INDENT_SIZE,
         int level = 0
     ) {
-        string space = string.Concat(Enumerable.Repeat(" ", level * indentSize));
+        string space = string.Concat(Enumerable.Repeat(' ', level * indentSize));
 
         foreach (string line in lines)
             WriteObject($"{space}{line}");
@@ -187,8 +187,8 @@ public class WriteMarkdownTreeCommand : Cmdlet
                 : "[ ] "
             : string.Empty;
 
-        string firstSpace = string.Concat(Enumerable.Repeat(" ", level * indentSize));
-        string secndSpace = string.Concat(Enumerable.Repeat(" ", (level + 1) * indentSize));
+        string firstSpace = string.Concat(Enumerable.Repeat(' ', level * indentSize));
+        string secndSpace = string.Concat(Enumerable.Repeat(' ', (level + 1) * indentSize));
 
         var langCapture = psobject.Properties.Match("_Language");
         var linesCapture = psobject.Properties.Match("_Lines");
@@ -207,7 +207,12 @@ public class WriteMarkdownTreeCommand : Cmdlet
                 object other => [other.ToString() ?? string.Empty],
             };
 
-            var codeBlock = new CodeBlock
+            var lineNumberCapture = psobject.Properties.Match("_LineNumber");
+
+            int lineNumber = lineNumberCapture.Count != 0
+                ? (int)lineNumberCapture.First().Value : -1;
+
+            var codeBlock = new CodeBlock(lineNumber)
             {
                 Language = langCapture.First().Value.ToString() ?? string.Empty,
                 Lines = lines,
@@ -297,9 +302,15 @@ public class WriteMarkdownTreeCommand : Cmdlet
         IList<string> headings = [];
         IList<Row> rows = [];
         Row headingRow = [];
+        int lineNumber = -1;
 
         foreach (PSObject item in items)
         {
+            var lineNumberCapture = item.Properties.Match("_LineNumber");
+
+            lineNumber = lineNumberCapture.Count != 0
+                ? (int)lineNumberCapture.First().Value : -1;
+
             IList<string> newHeadings =
                 [.. from p in item.Properties
                     select p.Name];
@@ -324,7 +335,7 @@ public class WriteMarkdownTreeCommand : Cmdlet
                     [.. from h in newHeadings
                         select new Text { Content = h }];
 
-                yield return new Table
+                yield return new Table(lineNumber)
                 {
                     Headings = headingRow,
                     Rows = rows,
@@ -339,7 +350,7 @@ public class WriteMarkdownTreeCommand : Cmdlet
             [.. from h in headings
                 select new Text { Content = h }];
 
-        yield return new Table
+        yield return new Table(lineNumber)
         {
             Headings = headingRow,
             Rows = rows,
