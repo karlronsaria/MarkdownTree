@@ -12,15 +12,21 @@ public class TestOutlineStack
         {
             yield return Name;
 
-            foreach (var child in Children)
-                foreach (var name in ((TestTree)child).Names())
-                    yield return name;
+            foreach (var name in
+                from TestTree child in Children
+                from name in child.Names()
+                select name
+            )
+                yield return name;
 
             yield break;
         }
 
         public override string ToString() =>
             $"{Name}: ({string.Join(", ", from c in Children select c.ToString())})";
+
+        public override Needle? FindFirstSegment(ISegment.Predicate predicate) => null;
+        public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate) => [];
     }
 
     [SetUp]
@@ -51,6 +57,12 @@ public class TestOutlineStack
         ];
 
         var myStack = new OutlineStack();
+
+        foreach ((string word, int index) in mock)
+            myStack.Put(
+                new TestTree(0) { Name = word },
+                index
+            );
 
         (var forest, _) = myStack.Flush();
 

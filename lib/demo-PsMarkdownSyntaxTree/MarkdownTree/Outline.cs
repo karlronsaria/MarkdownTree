@@ -11,10 +11,63 @@ public interface IMarkdownWritable
     public IEnumerable<string> ToMarkdown(int level, int indent);
 }
 
+public class Needle
+{
+    public required int LineNumber { get; set; }
+    public required int ColumnNumber { get; set; }
+    public required Branching Branch { get; set; }
+    public required Token Token { get; set; }
+}
+
 public abstract class Branching(int lineNumber) : ITree
 {
     public IList<ITree> Children { get; set; } = [];
     public int LineNumber { get; set; } = lineNumber;
+
+    public abstract Needle? FindFirstSegment(ISegment.Predicate predicate);
+    public abstract IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate);
+
+    public Needle? FindFirst(ISegment.Predicate predicate)
+    {
+        if (FindFirstSegment(predicate) is Needle needle)
+            return needle;
+
+        foreach (ITree child in Children)
+            if (child is Branching branch && branch.FindFirst(predicate) is Needle n)
+                return n;
+            else if (child is ISegment e && e.WhereFirst(predicate) is Token g)
+                return new Needle
+                {
+                    LineNumber = LineNumber,
+                    ColumnNumber = g.Start,
+                    Branch = this,
+                    Token = g,
+                };
+
+        return null;
+    }
+
+    public IEnumerable<Needle> FindAll(ISegment.Predicate predicate)
+    {
+        foreach (Needle needle in FindAllSegments(predicate))
+            yield return needle;
+
+        foreach (ITree child in Children)
+            if (child is Branching branch)
+                foreach (Needle n in branch.FindAll(predicate))
+                    yield return n;
+            else if (child is ISegment e)
+                foreach (Token g in e.WhereAll(predicate))
+                    yield return new Needle
+                    {
+                        LineNumber = LineNumber,
+                        ColumnNumber = g.Start,
+                        Branch = this,
+                        Token = g,
+                    };
+
+        yield break;
+    }
 
     public delegate bool Predicate(ITree tree);
 
@@ -58,6 +111,30 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     public ISegment Content { get; set; } = new Leaf();
 
     public string Name => Content.ToString().Trim();
+
+    public override Needle? FindFirstSegment(ISegment.Predicate predicate) =>
+        Content.WhereFirst(predicate) switch
+        {
+            Token t => new Needle
+            {
+                LineNumber = LineNumber,
+                ColumnNumber = t.Start,
+                Branch = this,
+                Token = t,
+            },
+            _ => null,
+        };
+
+    public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate) =>
+        from what in Content.WhereAll(predicate)
+        where what is Token t
+        select new Needle
+        {
+            LineNumber = LineNumber,
+            ColumnNumber = what.Start,
+            Branch = this,
+            Token = what,
+        };
 
     public static IEnumerable<string> HeadingToMarkdown(int level, ITree content)
     {
@@ -672,6 +749,9 @@ public class CodeBlock(int lineNumber) : Branching(lineNumber), IMarkdownWritabl
     public string Language { get; set; } = string.Empty;
     public IList<string> Lines { get; set; } = [];
 
+    public override Needle? FindFirstSegment(ISegment.Predicate predicate) => null;
+    public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate) => [];
+
     public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
@@ -693,6 +773,54 @@ public class Table(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 {
     public Row Headings { get; set; } = [];
     public IList<Row> Rows { get; set; } = [];
+
+    public override Needle? FindFirstSegment(ISegment.Predicate predicate)
+    {
+        if (Headings.WhereFirst(predicate) is Token t)
+            return new Needle
+            {
+                LineNumber = LineNumber,
+                ColumnNumber = t.Start,
+                Branch = this,
+                Token = t,
+            };
+
+        for (int i = 0; i < Rows.Count; i++)
+            if (Rows[i].WhereFirst(predicate) is Token s)
+                return new Needle
+                {
+                    LineNumber = LineNumber + i + 1,
+                    ColumnNumber = s.Start,
+                    Branch = this,
+                    Token = s,
+                };
+
+        return null;
+    }
+
+    public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate)
+    {
+        foreach (Token t in Headings.WhereAll(predicate))
+            yield return new Needle
+            {
+                LineNumber = LineNumber,
+                ColumnNumber = t.Start,
+                Branch = this,
+                Token = t,
+            };
+
+        for (int i = 0; i < Rows.Count; i++)
+            foreach (Token s in Rows[i].WhereAll(predicate))
+                yield return new Needle
+                {
+                    LineNumber = LineNumber + i + 1,
+                    ColumnNumber = s.Start,
+                    Branch = this,
+                    Token = s,
+                };
+
+        yield break;
+    }
 
     public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
 
@@ -716,7 +844,11 @@ public class Table(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     }
 }
 
-public class Malformed(int lineNumber) : Branching(lineNumber);
+public class Malformed(int lineNumber) : Branching(lineNumber)
+{
+    public override Needle? FindFirstSegment(ISegment.Predicate predicate) => null;
+    public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate) => [];
+}
 
 public class TreeDepth()
 {

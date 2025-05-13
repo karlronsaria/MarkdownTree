@@ -1,5 +1,4 @@
 ﻿using MarkdownTree.Lex;
-using System.Diagnostics.Contracts;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -14,18 +13,17 @@ public interface ITree;
 
 public interface ISegment : ITree
 {
+    public delegate bool Predicate(Token token);
     public string ToString();
+    public Token? WhereFirst(Predicate predicate);
+    public IEnumerable<Token> WhereAll(Predicate predicate);
 }
 
 public class WhiteSpaceLine : ISegment
 {
     public override string ToString() => string.Empty;
-}
-
-public class MalformedSegment(ITree tree) : ISegment
-{
-    public ITree Tree = tree;
-    public override string ToString() => base.ToString() ?? string.Empty;
+    public Token? WhereFirst(ISegment.Predicate predicate) => null;
+    public IEnumerable<Token> WhereAll(ISegment.Predicate predicate) => [];
 }
 
 public class Leaf : Token, ISegment
@@ -33,6 +31,13 @@ public class Leaf : Token, ISegment
     public Leaf() : base() { }
     public Leaf(Token token) : base(token) { }
     public override string ToString() => base.ToString() ?? string.Empty;
+    public Token ToToken() => new(this);
+
+    public Token? WhereFirst(ISegment.Predicate predicate) =>
+        predicate(this) ? ToToken() : null;
+
+    public IEnumerable<Token> WhereAll(ISegment.Predicate predicate) =>
+        predicate(this) ? [ToToken()] : [];
 }
 
 public class Sequence : List<ISegment>, ISegment
@@ -42,6 +47,21 @@ public class Sequence : List<ISegment>, ISegment
 
     public override string ToString() =>
         string.Join(string.Empty, from i in this select i.ToString());
+
+    public Token? WhereFirst(ISegment.Predicate predicate)
+    {
+        foreach (ISegment i in this)
+            return i.WhereFirst(predicate);
+
+        return null;
+    }
+
+    public IEnumerable<Token> WhereAll(ISegment.Predicate predicate)
+    {
+        foreach (ISegment i in this)
+            foreach (Token t in i.WhereAll(predicate))
+                yield return t;
+    }
 }
 
 public class Row : Sequence
@@ -55,6 +75,18 @@ public class Colon : ISegment
     public required ISegment Left { get; set; }
     public required ISegment Right { get; set; }
     public override string ToString() => $"{Left.ToString()}: {Right.ToString()}";
+
+    public Token? WhereFirst(ISegment.Predicate predicate) =>
+        Left.WhereFirst(predicate) ?? Right.WhereFirst(predicate);
+
+    public IEnumerable<Token> WhereAll(ISegment.Predicate predicate)
+    {
+        foreach (Token t in Left.WhereAll(predicate))
+            yield return t;
+
+        foreach (Token t in Right.WhereAll(predicate))
+            yield return t;
+    }
 }
 
 public class LinkText : ISegment
@@ -62,6 +94,18 @@ public class LinkText : ISegment
     public required ISegment Box { get; set; }
     public required ISegment Link { get; set; }
     public override string ToString() => $"[{Box.ToString()}]({Link.ToString()})";
+
+    public Token? WhereFirst(ISegment.Predicate predicate) =>
+        Box.WhereFirst(predicate) ?? Link.WhereFirst(predicate);
+
+    public IEnumerable<Token> WhereAll(ISegment.Predicate predicate)
+    {
+        foreach (Token t in Box.WhereAll(predicate))
+            yield return t;
+
+        foreach (Token t in Link.WhereAll(predicate))
+            yield return t;
+    }
 }
 
 public class ImageMacro : LinkText
@@ -69,9 +113,10 @@ public class ImageMacro : LinkText
     public override string ToString() => $"!{base.ToString()}";
 }
 
-public class Text : ISegment
+public class Text : Leaf
 {
-    public string Content { get; set; } = string.Empty;
+    public Text() : base() { }
+    public Text(Token token) : base(token) { }
     public override string ToString() => Content;
 }
 
@@ -169,13 +214,10 @@ public static partial class Segments
             if (branch is ISegment inline)
                 cell.Add(inline);
 
-            if (tokens.Current.Type == TokenType.Bar)
+            if (tokens.Current.Type == TokenType.Bar && cell.Count > 0)
             {
-                if (cell.Count > 0)
-                {
-                    row.Add(cell);
-                    cell = [];
-                }
+                row.Add(cell);
+                cell = [];
             }
 
             (success, branch) = Get(tokens, t => t.Type != TokenType.Bar);
@@ -234,7 +276,7 @@ public static partial class Segments
     {
         StringBuilder textBuilder = new();
         ISegment? head = null;
-        Token current;
+        Token current = new();
         bool fail = true;
 
         while (tokens.MoveNext() && (fail = predicate(tokens.Current)))
@@ -249,7 +291,7 @@ public static partial class Segments
                 default:
                     if (textBuilder.Length > 0)
                     {
-                        head = Add(head, [new Text
+                        head = Add(head, [new Text(current)
                         {
                             Content = textBuilder.ToString(),
                         }]);
@@ -291,7 +333,7 @@ public static partial class Segments
         }
 
         head = textBuilder.Length > 0
-            ? Add(head, [new Text { Content = textBuilder.ToString() }])
+            ? Add(head, [new Text(current) { Content = textBuilder.ToString() }])
             : head;
 
         return (!fail, head);

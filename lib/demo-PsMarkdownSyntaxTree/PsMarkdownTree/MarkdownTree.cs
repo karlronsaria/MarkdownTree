@@ -85,7 +85,11 @@ public class FindMarkdownTreeCommand : PSCmdlet
     InvokeAsPredicate(object psobject, ScriptBlock scriptBlock)
     {
         var result = scriptBlock.Invoke(psobject);
-        bool confirm = result is not null && result.Count > 0 && LanguagePrimitives.IsTrue(result[0]);
+
+        bool confirm = result is not null
+            && result.Count > 0
+            && LanguagePrimitives.IsTrue(result[0]);
+
         return confirm;
     }
 
@@ -428,9 +432,14 @@ public class GetMarkdownTreeCommand : Cmdlet
                 ? outline.CascadeUnfold().CascadeMerge()
                 : tree;
 
-            var obj = new PSObject();
-            AddProperty(obj, worktree);
-            WriteObject(obj);
+            if (AsMarkdown.IsPresent)
+                WriteObject(worktree);
+            else
+            {
+                var obj = new PSObject();
+                AddProperty(obj, worktree);
+                WriteObject(obj);
+            }
         }
     }
 
