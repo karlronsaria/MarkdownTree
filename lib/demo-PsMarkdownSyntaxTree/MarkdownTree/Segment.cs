@@ -1,5 +1,4 @@
 ﻿using MarkdownTree.Lex;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MarkdownTree.Parse;
@@ -188,14 +187,14 @@ public static partial class Segments
     public static bool
     IsRowSeparator(IEnumerator<Token> tokens)
     {
-        (var segment, _) = GetRow(tokens);
+        (ISegment segment, _) = GetRow(tokens);
 
         if (segment is null)
             return false;
 
         if (segment is Row row)
-            foreach (var cell in row)
-                if (!(TableVinculum()).IsMatch(cell.ToString()))
+            foreach (ISegment cell in row)
+                if (!TableVinculum().IsMatch(cell.ToString()))
                     return false;
 
         return true;
@@ -274,7 +273,7 @@ public static partial class Segments
     public static (bool, ISegment?)
     Get(IEnumerator<Token> tokens, Predicate predicate)
     {
-        StringBuilder textBuilder = new();
+        IList<Token> texts = [];
         ISegment? head = null;
         Token current = new();
         bool fail = true;
@@ -286,17 +285,18 @@ public static partial class Segments
             switch (current.Type)
             {
                 case TokenType.Text:
-                    textBuilder.Append(current.Content);
+                    texts.Add(current);
                     break;
                 default:
-                    if (textBuilder.Length > 0)
+                    if (texts.Count > 0)
                     {
-                        head = Add(head, [new Text(current)
+                        head = Add(head, [new Text(texts.First())
                         {
-                            Content = textBuilder.ToString(),
+                            Content = string.Join("", texts.Select(x => x.Content)),
+                            End = texts.Last().End,
                         }]);
 
-                        textBuilder = new();
+                        texts = [];
                     }
 
                     break;
@@ -332,9 +332,16 @@ public static partial class Segments
             }
         }
 
-        head = textBuilder.Length > 0
-            ? Add(head, [new Text(current) { Content = textBuilder.ToString() }])
-            : head;
+        if (texts.Count > 0)
+        {
+            ISegment token = new Text(texts.First())
+            {
+                Content = string.Join("", texts.Select(x => x.Content)),
+                End = texts.Last().End,
+            };
+
+            head = Add(head, [token]);
+        }
 
         return (!fail, head);
     }

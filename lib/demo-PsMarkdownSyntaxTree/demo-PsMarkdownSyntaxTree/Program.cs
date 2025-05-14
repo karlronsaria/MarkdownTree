@@ -9,14 +9,46 @@ using System.Management.Automation.Runspaces;
 
 IList<string> doc;
 
+/*
+issue
+- howto
+
+  ```powershell
+  $other = cat C:\note\pool_-_2024-09-30_Master.md | Get-MarkdownTree -AsMarkdown
+  $other.IsA("Hyperlink")
+  @($other.IsA("Hyperlink"))[1].Token.Content
+  ```
+
+- case
+
+  ```markdown
+  - actual: cannot use login <cnalisoviejo@gmail.com>
+  ```
+
+  ```markdown
+  | retrieved | what | url |
+  |-----------|------|-----|
+  | 2025-04-09 | padlet | <https://padlet.com/cn_edu/jr-explorers-bits-bytes-h2fk29k4u37fuw4t> |
+  | 2025-04-09 | slide share | <https://drive.google.com/drive/folders/1sTMmh52hH4_XfvLbFfz1hqxhgc94f_mp> |
+  ```
+*/
+
 doc = [
-    "# est",
-    "- uan",
-    "  - sin",
-    "    - est",
-    "      - It's all",
-    "  - est",
-    "    - I have",
+    // "# est",
+    // "- actual: cannot use login <cnalisoviejo@gmail.com>",
+
+    "| retrieved | what | url |",
+    "|-----------|------|-----|",
+    "| 2025-04-09 | padlet | <https://padlet.com/cn_edu/jr-explorers-bits-bytes-h2fk29k4u37fuw4t> |",
+    "| 2025-04-09 | slide share | <https://drive.google.com/drive/folders/1sTMmh52hH4_XfvLbFfz1hqxhgc94f_mp> |",
+
+    // "# est",
+    // "- uan",
+    // "  - sin",
+    // "    - est",
+    // "      - It's all",
+    // "  - est",
+    // "    - I have",
 
     // "# the",
     // "- define",

@@ -11,15 +11,55 @@ public interface IMarkdownWritable
     public IEnumerable<string> ToMarkdown(int level, int indent);
 }
 
-public class Needle
+public interface IHaystack
+{
+    public enum Type
+    {
+        String,
+        Text,
+        Hyperlink,
+        Strike,
+        InlineCode,
+    }
+
+    public IHaystack? FindFirst(ISegment.Predicate predicate);
+    public IEnumerable<IHaystack> FindAll(ISegment.Predicate predicate);
+
+    public IEnumerable<IHaystack> IsA(Type type) =>
+        FindAll(type switch
+        {
+            Type.String => (i => i.Type == TokenType.String),
+            Type.Text => (i => i.Type == TokenType.Text),
+            Type.Hyperlink => (i => i.Type == TokenType.Hyperlink),
+            Type.Strike => (i => i.Type == TokenType.Strike),
+            Type.InlineCode => (i => i.Type == TokenType.InlineCode),
+            _ => (_ => false),
+        });
+}
+
+public class Needle : IHaystack
 {
     public required int LineNumber { get; set; }
     public required int ColumnNumber { get; set; }
     public required Branching Branch { get; set; }
     public required Token Token { get; set; }
+
+    public IHaystack? FindFirst(ISegment.Predicate predicate) =>
+        predicate(Token) 
+            ? this
+            : Branch.FindFirst(predicate);
+
+    public IEnumerable<IHaystack> FindAll(ISegment.Predicate predicate)
+    {
+        if (predicate(Token))
+            yield return this;
+
+        foreach (IHaystack needle in Branch.FindAll(predicate))
+            yield return needle;
+    }
 }
 
-public abstract class Branching(int lineNumber) : ITree
+public abstract class Branching(int lineNumber) : ITree, IHaystack
 {
     public IList<ITree> Children { get; set; } = [];
     public int LineNumber { get; set; } = lineNumber;
@@ -27,7 +67,7 @@ public abstract class Branching(int lineNumber) : ITree
     public abstract Needle? FindFirstSegment(ISegment.Predicate predicate);
     public abstract IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate);
 
-    public Needle? FindFirst(ISegment.Predicate predicate)
+    public IHaystack? FindFirst(ISegment.Predicate predicate)
     {
         if (FindFirstSegment(predicate) is Needle needle)
             return needle;
@@ -47,14 +87,14 @@ public abstract class Branching(int lineNumber) : ITree
         return null;
     }
 
-    public IEnumerable<Needle> FindAll(ISegment.Predicate predicate)
+    public IEnumerable<IHaystack> FindAll(ISegment.Predicate predicate)
     {
         foreach (Needle needle in FindAllSegments(predicate))
             yield return needle;
 
         foreach (ITree child in Children)
             if (child is Branching branch)
-                foreach (Needle n in branch.FindAll(predicate))
+                foreach (IHaystack n in branch.FindAll(predicate))
                     yield return n;
             else if (child is ISegment e)
                 foreach (Token g in e.WhereAll(predicate))
@@ -143,7 +183,8 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     }
 
     public IEnumerable<string>
-    ContentAsMarkdown(int level = 1, int indent = 0) {
+    ContentAsMarkdown(int level = 1, int indent = 0)
+    {
         foreach (string line in ContentAsMarkdown(Content, LineType, level, indent))
             yield return line;
     }
