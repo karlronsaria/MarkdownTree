@@ -406,7 +406,7 @@ public class GetMarkdownTreeCommand : Cmdlet
     {
         base.EndProcessing();
 
-        var forest = Outline.Get(_markdown, c => !MuteProperty.Contains(((Outline)c).Name));
+        var forest = Outline.Scan(_markdown, c => !MuteProperty.Contains(((Outline)c).Name));
 
         if (MergeProperty.Length > 0)
         {

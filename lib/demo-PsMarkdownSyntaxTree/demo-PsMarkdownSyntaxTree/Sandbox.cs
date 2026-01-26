@@ -115,7 +115,7 @@ public class TestOutline
 
     public void EndProcessing()
     {
-        foreach (var tree in Outline.Get(_markdown))
+        foreach (var tree in Outline.Scan(_markdown))
         {
             ITree worktree = tree is Outline outline
                 ? outline.Unfold().CascadeMerge()

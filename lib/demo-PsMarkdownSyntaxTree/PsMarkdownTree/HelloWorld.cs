@@ -38,6 +38,7 @@ public class GetExpletiveCommand : Cmdlet
         "non-standard",
         "gormless",
         "crusted",
+        "rancid",
         "rotten",
     ];
 

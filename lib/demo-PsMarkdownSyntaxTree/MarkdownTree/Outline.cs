@@ -550,9 +550,14 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
         return this;
     }
 
-    public static IEnumerable<ITree> Get(IEnumerable<string> lines) => Get(lines, _ => true);
+    // todo: remove
+    public static string HelloWorld(IEnumerable<string> lines) => "Hello, world!";
 
-    public static IEnumerable<ITree> Get(IEnumerable<string> lines, Predicate whereOutline)
+    public static IEnumerable<ITree> Scan(string[] lines) => Scan(lines, _ => true);
+
+    public static IEnumerable<ITree> Scan(IEnumerable<string> lines) => Scan(lines, _ => true);
+
+    public static IEnumerable<ITree> Scan(IEnumerable<string> lines, Predicate whereOutline)
     {
         TreeDepth depth = new();
         OutlineStack stack = new();
@@ -565,14 +570,14 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
             string line = e.Current;
 
             // Line class
-            Line lineClass = Line.Get(line);
+            Line lineClass = Line.Scan(line);
 
-            if (lineClass is WhiteSpaceLineClass)
+            if (lineClass is MarkdownTree.WhiteSpaceLine)
                 continue;
 
             Branching branch;
 
-            if (lineClass is CodeBlockLineClass codeBlockLine)
+            if (lineClass is CodeBlockLine codeBlockLine)
             {
                 // Enumerator passed
                 (branch, e) = GetCodeBlock((IEnumerator<string>)e.Clone(), codeBlockLine);
@@ -608,18 +613,18 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
                         LineType = lineClass.Type,
                     };
 
-                var tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
+                var tokens = Token.Scan(line, lineClass.Type, lineClass.Length);
 
                 if (branch is Outline o)
                 {
-                    o.Content = Segments.Get(lineClass.Type, new Enumerator<Token>([.. tokens]));
+                    o.Content = Segments.Scan(lineClass.Type, new Enumerator<Token>([.. tokens]));
 
                     if (!whereOutline(o))
                         continue;
                 }
             }
 
-            if (lineClass is HeadingLineClass c)
+            if (lineClass is HeadingLine c)
             {
                 depth.Set(c.Level);
             }
@@ -647,8 +652,8 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     GetTable(IEnumerator<string> lines, Line lineClass)
     {
         string line = lines.Current;
-        var tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
-        (ISegment s, _) = Segments.GetRow(new Enumerator<Token>([.. tokens]));
+        var tokens = Token.Scan(line, lineClass.Type, lineClass.Length);
+        (ISegment s, _) = Segments.ScanRow(new Enumerator<Token>([.. tokens]));
 
         if (s is not Row)
             // Branch created
@@ -663,8 +668,8 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
         line = lines.Current;
 
         // Line class
-        lineClass = Line.Get(line);
-        tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
+        lineClass = Line.Scan(line);
+        tokens = Token.Scan(line, lineClass.Type, lineClass.Length);
         bool isRowSeparator = Segments.IsRowSeparator(new Enumerator<Token>([.. tokens]));
 
         // Advance enumerator
@@ -674,7 +679,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
             line = lines.Current;
 
             // Line class
-            lineClass = Line.Get(line);
+            lineClass = Line.Scan(line);
 
             if (
                 lineClass.Type != LineType.TableRow
@@ -683,7 +688,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
                 // Branch created
                 return (new Malformed(lines.Index()) { Children = [s] }, lines);
 
-            tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
+            tokens = Token.Scan(line, lineClass.Type, lineClass.Length);
             isRowSeparator = Segments.IsRowSeparator(new Enumerator<Token>([.. tokens]));
         }
 
@@ -698,12 +703,12 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
             line = backtracker.Current;
 
             // Line class
-            lineClass = Line.Get(line);
+            lineClass = Line.Scan(line);
 
             if (lineClass.Type == LineType.TableRow)
             {
-                tokens = Token.Tokenize(line, lineClass.Type, lineClass.Length);
-                (s, _) = Segments.GetRow(new Enumerator<Token>([.. tokens]));
+                tokens = Token.Scan(line, lineClass.Type, lineClass.Length);
+                (s, _) = Segments.ScanRow(new Enumerator<Token>([.. tokens]));
 
                 if (s is Row row)
                     rows.Add(row);
@@ -730,7 +735,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     }
 
     public static (Branching, IEnumerator<string>)
-    GetCodeBlock(IEnumerator<string> lines, CodeBlockLineClass lineClass)
+    GetCodeBlock(IEnumerator<string> lines, CodeBlockLine lineClass)
     {
         int firstIndent = lineClass.Indent;
         IList<string> codeLines = [];

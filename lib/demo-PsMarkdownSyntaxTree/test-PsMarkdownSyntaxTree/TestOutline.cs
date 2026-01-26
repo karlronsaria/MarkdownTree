@@ -560,7 +560,7 @@ public class TestOutline
         ) in data
         ) {
             IList<string> actual =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                 where o is Outline
                 from string s in GetStrings(((Outline)o))
                 select s];
@@ -571,7 +571,7 @@ public class TestOutline
                 Assert.That(actual[i], Is.EqualTo(expected[i]), $"Outline tree Line {i}");
 
             actual =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                 where o is Outline
                 from string s in GetStrings(((Outline)o).CascadeUnfold())
                 select s];
@@ -582,7 +582,7 @@ public class TestOutline
                 Assert.That(actual[i], Is.EqualTo(expectedUnfolded[i]), $"Unfolded outline tree Line {i}");
 
             actual =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                 where o is Outline
                 from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge())
                 select s];
@@ -593,7 +593,7 @@ public class TestOutline
                 Assert.That(actual[i], Is.EqualTo(expectedMerged[i]), $"Merged outline tree Line {i}");
 
             actual =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                 where o is Outline
                 from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge().CascadeFold())
                 select s];
@@ -604,7 +604,7 @@ public class TestOutline
                 Assert.That(actual[i], Is.EqualTo(expectedRefolded[i]), $"Refolded merged outline tree Line {i}");
 
             actual =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                 where o is Outline
                 from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge().CascadeFold().CascadeUnfold())
                 select s];
@@ -660,7 +660,7 @@ public class TestOutline
         foreach ((IList<string> mock, IList<string> expected) in data)
         {
             IList<string> actual =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                     where o is Outline
                     from string s in ((Outline)o).ToMarkdown()
                     select s];

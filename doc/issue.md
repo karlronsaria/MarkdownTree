@@ -10,7 +10,7 @@
 
       - change encoding
 
-        ```text
+        ` ` ` text
         :e ++enc=utf16
 
         :e ++enc=utf16le
@@ -18,7 +18,7 @@
         :e ++ff=mac
         :setlocal ff=dos
         :wq
-        ```
+        ` ` `
       ```
 
     - in powershell

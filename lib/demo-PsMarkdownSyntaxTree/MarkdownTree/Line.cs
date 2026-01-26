@@ -43,6 +43,7 @@ public partial class Line
     public int Indent { get; set; } = 0;
     public Match? Capture { get; set; }
 
+    // The completion status of a checkbox item
     public static (int, Match) GetStatus(string text)
     {
         Match capture = Checkbox().Match(text);
@@ -57,7 +58,7 @@ public partial class Line
               };
     }
 
-    public static Line Get(string text)
+    public static Line Scan(string text)
     {
         int i = 0;
         bool success = false;
@@ -75,12 +76,12 @@ public partial class Line
 
         var lineClass = type switch
         {
-            LineType.WhiteSpace => new WhiteSpaceLineClass
+            LineType.WhiteSpace => new WhiteSpaceLine
             {
                 Type = type,
             },
 
-            LineType.Heading => new HeadingLineClass
+            LineType.Heading => new HeadingLine
             {
                 Type = type,
                 Level = capture?.Groups["hashes"].Length ?? 0,
@@ -89,7 +90,7 @@ public partial class Line
                 Capture = capture,
             },
 
-            LineType.CodeBlock => new CodeBlockLineClass
+            LineType.CodeBlock => new CodeBlockLine
             {
                 Type = type,
                 Language = capture?.Groups["language"].Value ?? string.Empty,
@@ -177,15 +178,15 @@ public partial class Line
     private static partial Regex Paragraph();
 }
 
-public class CodeBlockLineClass : Line
+public class CodeBlockLine : Line
 {
     public string Language { get; set; } = string.Empty;
 }
 
-public class HeadingLineClass : Line
+public class HeadingLine : Line
 {
     public int Level { get; set; }
 }
 
-public class WhiteSpaceLineClass : Line;
+public class WhiteSpaceLine : Line;
 

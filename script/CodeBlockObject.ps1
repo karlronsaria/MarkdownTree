@@ -2,10 +2,7 @@ function Test-MdCodeBlock {
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [String]
-        $InputObject,
-
-        [Switch]
-        $AsBranch
+        $InputObject
     )
 
     Process {
@@ -113,7 +110,7 @@ function Get-MdCodeBlock {
                 continue
             }
 
-            $blockEnd = $line | Test-MdCodeBlock `
+            $blockEnd = $line | Test-MdCodeBlock
 
             if ($blockEnd) {
                 $snippets += @($snippet)
@@ -152,3 +149,4 @@ function Get-MdCodeBlock {
         })
     }
 }
+

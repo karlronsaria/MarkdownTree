@@ -122,12 +122,12 @@ public class TestToken
         foreach ((string mock, var expected) in data)
         {
             int index = 0;
-            var lex = Line.Get(mock);
+            var lex = Line.Scan(mock);
 
             string content = TestString(lex);
             Assert.That(content, Is.EqualTo(expected[index++]));
 
-            foreach (var token in Token.Tokenize(mock, lex.Type, lex.Length))
+            foreach (var token in Token.Scan(mock, lex.Type, lex.Length))
                 Assert.That(TestString(token), Is.EqualTo(expected[index++]));
         }
     }

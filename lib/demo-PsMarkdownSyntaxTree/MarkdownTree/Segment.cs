@@ -18,7 +18,7 @@ public interface ISegment : ITree
     public IEnumerable<Token> WhereAll(Predicate predicate);
 }
 
-public class WhiteSpaceLine : ISegment
+public class WhiteSpace : ISegment
 {
     public override string ToString() => string.Empty;
     public Token? WhereFirst(ISegment.Predicate predicate) => null;
@@ -121,21 +121,21 @@ public class Text : Leaf
 
 public static partial class Segments
 {
-    public static ISegment Get(LineType lineType, IEnumerator<Token> tokens)
+    public static ISegment Scan(LineType lineType, IEnumerator<Token> tokens)
     {
         ISegment? head;
 
         switch (lineType)
         {
             case LineType.TableRow:
-                (head, _) = GetRow(tokens);
+                (head, _) = ScanRow(tokens);
                 break;
             case LineType.WhiteSpace:
-                head = new WhiteSpaceLine();
+                head = new WhiteSpace();
                 break;
             case LineType.ImageMacro:
                 _ = tokens.MoveNext();
-                (head, _) = GetLinkText(tokens, moveNext: false); // todo
+                (head, _) = ScanLinkText(tokens, moveNext: false); // todo
 
                 if (head is LinkText linkText)
                     head = new ImageMacro
@@ -146,20 +146,20 @@ public static partial class Segments
 
                 break;
             default:
-                head = Get(tokens);
+                head = Scan(tokens);
                 break;
         }
 
         return head ?? new Leaf();
     }
 
-    public delegate bool Predicate(Token token);
+    public delegate bool Scannable(Token token);
 
     public static ISegment
     Add(ISegment? root, ISegment branch)
     {
         if (root is null)
-            return root = branch;
+            return branch;
 
         if (root is not Sequence)
             root = new Sequence([root]);
@@ -178,16 +178,16 @@ public static partial class Segments
     }
 
     public static ISegment?
-    Get(IEnumerator<Token> tokens)
+    Scan(IEnumerator<Token> tokens)
     {
-        (_, ISegment? head) = Get(tokens, t => true);
+        (_, ISegment? head) = Scan(tokens, t => true);
         return head;
     }
 
     public static bool
     IsRowSeparator(IEnumerator<Token> tokens)
     {
-        (ISegment segment, _) = GetRow(tokens);
+        (ISegment segment, _) = ScanRow(tokens);
 
         if (segment is null)
             return false;
@@ -201,12 +201,12 @@ public static partial class Segments
     }
 
     public static (ISegment, IEnumerator<Token>?)
-    GetRow(IEnumerator<Token> tokens)
+    ScanRow(IEnumerator<Token> tokens)
     {
         Row row = [];
         Sequence cell = [];
 
-        (bool success, ISegment? branch) = Get(tokens, t => t.Type != TokenType.Bar);
+        (bool success, ISegment? branch) = Scan(tokens, t => t.Type != TokenType.Bar);
 
         while (success) // &= tokens.MoveNext())
         {
@@ -219,14 +219,14 @@ public static partial class Segments
                 cell = [];
             }
 
-            (success, branch) = Get(tokens, t => t.Type != TokenType.Bar);
+            (success, branch) = Scan(tokens, t => t.Type != TokenType.Bar);
         }
 
         return (row, tokens);
     }
 
-    public static (ISegment, IEnumerator<Token>?)
-    GetLinkText(IEnumerator<Token> tokens, bool moveNext = true)
+    private static (ISegment, IEnumerator<Token>?)
+    ScanLinkText(IEnumerator<Token> tokens, bool moveNext = true)
     {
         ISegment fail = new Leaf(tokens.Current);
         ((Leaf)fail).Type = TokenType.Text;
@@ -271,14 +271,14 @@ public static partial class Segments
     }
 
     public static (bool, ISegment?)
-    Get(IEnumerator<Token> tokens, Predicate predicate)
+    Scan(IEnumerator<Token> tokens, Scannable scannable)
     {
         IList<Token> texts = [];
         ISegment? head = null;
         Token current = new();
         bool fail = true;
 
-        while (tokens.MoveNext() && (fail = predicate(tokens.Current)))
+        while (tokens.MoveNext() && (fail = scannable(tokens.Current)))
         {
             current = tokens.Current;
 
@@ -305,7 +305,7 @@ public static partial class Segments
             switch (current.Type)
             {
                 case TokenType.Colon:
-                    (_, ISegment? tempHead) = Get(tokens, predicate);
+                    (_, ISegment? tempHead) = Scan(tokens, scannable);
 
                     head = new Colon
                     {
@@ -315,7 +315,7 @@ public static partial class Segments
 
                     break;
                 case TokenType.Box:
-                    (ISegment branch, var e) = GetLinkText((IEnumerator<Token>)tokens.Clone());
+                    (ISegment branch, var e) = ScanLinkText((IEnumerator<Token>)tokens.Clone());
 
                     if (e is IEnumerator<Token> f)
                     {

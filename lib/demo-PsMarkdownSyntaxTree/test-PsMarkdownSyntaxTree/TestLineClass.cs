@@ -38,7 +38,7 @@ public class TestLineClass
 
         foreach (var (text, expected) in mock)
         {
-            var sublex = Line.Get(text);
+            var sublex = Line.Scan(text);
 
             var indent = expected
                 .GetType()
@@ -86,7 +86,7 @@ public class TestLineClass
                             .GetValue(expected) ?? string.Empty;
 
                         Assert.That(
-                            ((CodeBlockLineClass)sublex).Language,
+                            ((CodeBlockLine)sublex).Language,
                             Is.EqualTo(language)
                         );
 

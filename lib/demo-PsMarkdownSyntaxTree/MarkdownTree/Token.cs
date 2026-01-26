@@ -1,6 +1,4 @@
-﻿using System.Collections;
-
-namespace MarkdownTree.Lex;
+﻿namespace MarkdownTree.Lex;
 
 /*
  * todo
@@ -85,8 +83,9 @@ public class Token
     public static bool Escaped(string input, int start, char escape = '\\') =>
         start >= 1 && input[start - 1] == escape;
 
+    // Start here
     public static IEnumerable<Token>
-    Tokenize(
+    Scan(
         string input,
         LineType lineType = LineType.Paragraph,
         int start = 0

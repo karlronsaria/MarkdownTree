@@ -52,7 +52,7 @@ public class TestToMarkdown
         foreach ((IList<string> mock, IList<string> expected) in data)
         {
             IList<ITree> forest =
-                [.. from o in Outline.Get(mock)
+                [.. from o in Outline.Scan(mock)
                     where o is Outline
                     select ((Outline)o).CascadeUnfold() as ITree];
 
@@ -157,7 +157,7 @@ public class TestToMarkdown
         foreach ((IList<string> mock, IList<string> expected) in data)
         {
             IList<string> actual = [..
-                from o in Outline.Get(mock)
+                from o in Outline.Scan(mock)
                 from string s in ((Outline)o).ToMarkdown()
                 select s
             ];
