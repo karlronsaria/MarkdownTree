@@ -1,6 +1,8 @@
 # issue
 
-- [ ] 2025-03-01-173847
+## completed
+
+- [x] 2025-03-01-173847
   - where: ``Get-MarkdownTree``, ``Object.ps1``
   - howto
     - in markdown file ``howto-vim.md``
@@ -47,8 +49,6 @@
       -----
       @{vim=}
       ```
-
-## completed
 
 - [x] 2025-01-09-052828
   - howto

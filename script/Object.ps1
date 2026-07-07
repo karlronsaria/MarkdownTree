@@ -57,7 +57,7 @@ function Write-MarkdownTree {
                 $properties = $InputObject.
                     PsObject.
                     Properties |
-                    where {
+                    Where-Object {
                         'NoteProperty' -eq $_.MemberType
                     }
 
@@ -179,8 +179,8 @@ function Find-Subtree {
                 }
 
                 @($InputObject) |
-                    where { $_ } |
-                    foreach {
+                    Where-Object { $_ } |
+                    ForEach-Object {
                         $params.InputObject = $_
                         Find-Subtree @params
                     }
@@ -190,7 +190,7 @@ function Find-Subtree {
 
             { $InputObject -is [PsCustomObject] } {
                 $properties = $InputObject.PsObject.Properties |
-                    where {
+                    Where-Object {
                         'NoteProperty' -eq $_.MemberType
                     }
 
@@ -201,7 +201,7 @@ function Find-Subtree {
 
                 switch ($PsCmdlet.ParameterSetName) {
                     'ByScriptBlock' {
-                        $result = $InputObject | where $Where
+                        $result = $InputObject | Where-Object $Where
 
                         if ($result) {
                             if ($Parent) {
@@ -292,7 +292,7 @@ function Get-SubtreeRotation {
         $properties = $InputObject.PsObject.Properties
         $subtree = [PsCustomObject]@{}
 
-        $rotate = $properties | where {
+        $rotate = $properties | Where-Object {
             $_.Name -in $RotateProperty
         }
 
@@ -306,9 +306,9 @@ function Get-SubtreeRotation {
         foreach ($attempt in $rotate) {
             # Create an object identical to the input object sans the
             # properties to be rotated
-            $properties | where {
+            $properties | Where-Object {
                 $_.Name -notin $RotateProperty
-            } | foreach {
+            } | ForEach-Object {
                 $subtree | Add-Member `
                     -MemberType NoteProperty `
                     -Name $_.Name `
@@ -326,7 +326,7 @@ function Get-SubtreeRotation {
                 }
 
                 { $_ -is [PsCustomObject] } {
-                    $subproperties = $_.PsObject.Properties | where {
+                    $subproperties = $_.PsObject.Properties | Where-Object {
                         $_.MemberType -eq 'NoteProperty'
                     }
 
@@ -406,7 +406,7 @@ function Get-MarkdownTree {
                 $Table
             )
 
-            $property = $InputObject.PsObject.Properties | where {
+            $property = $InputObject.PsObject.Properties | Where-Object {
                 $_.Name -eq $Name
             }
 
@@ -452,17 +452,35 @@ function Get-MarkdownTree {
             $Table = ConvertTo-MdTable `
                 -TableBuild $Table
 
+            if (-not $PrevName) {
+                $tempLevel = $PrevLevel
+                $prevValue = $Stack[$tempLevel]
+
+                $Stack[$tempLevel] = if ($null -eq $prevValue -or (Test-EmptyObject $prevValue)) {
+                    $Table
+                }
+                else {
+                    @($prevValue) + @($Table)
+                }
+
+                return $Stack
+            }
+
             $tempLevel = if ('ListItem' -in $TableStart.Type) {
                 $TableStart.Level - 2
             }
             else {
-                $PrevLevel - 1
+                # # todo: (karlr 2026-03-30): quick refactor
+                # $PrevLevel - 1
+                $PrevLevel
             }
 
             Add-Property `
                 -InputObject $Stack[$tempLevel] `
                 -Name $PrevName `
                 -Value $Table
+
+            return $Stack
         }
 
         <#
@@ -477,13 +495,13 @@ function Get-MarkdownTree {
             )
 
             Begin {
-                $prevType = 'None'
-                $level = 0
-                $indentLength = 0
                 $pattern =
                     '^(?<indent>\s*)((?<header>#+)|(?<branch_start>\-|\*|\d+\.)\s)?\s*(?<content>.+)?$'
                 $inCodeBlock = $false
-                $codeBlockLevel = -1
+                $tabSize = 2
+                $headerNumber = 0
+                $indentNumber = 0
+                $level = 0
             }
 
             Process {
@@ -492,6 +510,10 @@ function Get-MarkdownTree {
                 $indent = $capture.Groups['indent']
                 $content = $capture.Groups['content']
                 $type = @()
+
+                if (-not $inCodeBlock) {
+                    $indentNumber = $indent.Length / $tabSize
+                }
 
                 if ($inCodeBlock) {
                     if (($content.Value | Test-MdCodeBlock)) {
@@ -538,34 +560,16 @@ function Get-MarkdownTree {
                     }
                 }
 
-                $nextLevel = if ('Header' -in $type) {
-                    $header.Length
-                }
-                elseif ('Header' -in $prevType) {
-                    $level + 1
-                }
-                elseif ($indent.Length -ne $indentLength) {
-                    $level + ($indent.Length - $indentLength) / 2
-                }
-                else {
-                    $level
+                if (-not $inCodeBlock) {
+                    if ('Header' -in $type) {
+                        $headerNumber = $header.Length
+                    }
                 }
 
-                if (-not $inCodeBlock -or 'CodeBlock' -in $type) {
-                    $level = $nextLevel
-                }
-
-                $indentLength = $indent.Length
-                $prevType = $type
+                $level = $headerNumber + $indentNumber + $(if ('Header' -in $type) { 0 } else { 1 })
 
                 return [PsCustomObject]@{
-                    Level =
-                        if ($inCodeBlock) {
-                            $level
-                        }
-                        else {
-                            $nextLevel
-                        }
+                    Level = $level
                     Type = $type
                     Content = $content.Value
                     IndentLength = $indent.Length
@@ -618,7 +622,7 @@ function Get-MarkdownTree {
                     }
 
                     $props = $Stack[$Level - 1].PsObject.Properties `
-                        | where {
+                        | Where-Object {
                             $_.Name -eq $PrevPropertyName
                         }
 
@@ -647,10 +651,10 @@ function Get-MarkdownTree {
                     $props = Get-NoteProperty $InputObject
 
                     return @($props).Count -eq 1 -and $(
-                            $value = @($props)[0].Value;
-                            $value -is [PsCustomObject]
-                        ) -and
-                        $null -eq (Get-NoteProperty $value)
+                        $value = @($props)[0].Value;
+                        $value -is [PsCustomObject]
+                    ) -and
+                    $null -eq (Get-NoteProperty $value)
                 }
 
                 function Convert-LeafToString {
@@ -667,7 +671,7 @@ function Get-MarkdownTree {
                                 @(Get-NoteProperty $value)[0].Name
                         }
                         else {
-                            $value | foreach {
+                            $value | ForEach-Object {
                                 Convert-LeafToString $_
                             }
                         }
@@ -683,9 +687,9 @@ function Get-MarkdownTree {
                     return 'Error'
                 }
 
-                $capture = [Regex]::Match( `
-                    $content, `
-                    "^\s*(\[(?<check>x| )\] )?((?<key>[^:`"]+)\s*:\s+)?(?<value>.*)?\s*$" `
+                $capture = [Regex]::Match(
+                    $content,
+                    "^\s*(\[(?<check>x| )\] )?((?<key>[^:`"]+)\s*:\s+)?(?<value>.*)?\s*$"
                 )
 
                 # if ($level -lt $prevLevel) {
@@ -709,7 +713,7 @@ function Get-MarkdownTree {
                 }
 
                 if ($null -ne $tableBuild) {
-                    Add-Table `
+                    $stack = Add-Table `
                         -Stack $stack `
                         -Table $tableBuild `
                         -TableStart $tableStart `
@@ -773,7 +777,6 @@ function Get-MarkdownTree {
                         -Value ($checkGroup.Value -eq 'x')
                 }
 
-                $prevLevel = $level
                 $keyCapture = $capture.Groups['key']
 
                 if ($keyCapture.Success) {
@@ -834,11 +837,13 @@ function Get-MarkdownTree {
 
                     $prevName = $content
                 }
+
+                $prevLevel = $level
             }
 
             End {
                 if ($null -ne $tableBuild) {
-                    Add-Table `
+                    $stack = Add-Table `
                         -Stack $stack `
                         -Table $tableBuild `
                         -TableStart $tableStart `
@@ -863,7 +868,7 @@ function Get-MarkdownTree {
     End {
         $content = $content `
             | Get-LexInfo `
-            | foreach {
+            | ForEach-Object {
                 if ($null -eq $startLevel) {
                     $highestLevel = $startLevel = $_.Level
                 }
@@ -876,16 +881,16 @@ function Get-MarkdownTree {
             }
 
         return $content `
-            | where {
+            | Where-Object {
                 $_.Type.Count -gt 0
             } `
-            | where {
+            | Where-Object {
                 $DepthLimit -eq -1 -or $_.Level -le $DepthLimit
             } `
             | Get-Parse `
                 -HighestLevel $highestLevel `
                 -MuteProperty:$MuteProperty `
-            | where {
+            | Where-Object {
                 -not (Test-EmptyObject $_)
             }
     }
@@ -911,7 +916,7 @@ function Get-NoteProperty {
     )
 
     $properties = $InputObject.PsObject.Properties `
-        | where { 'NoteProperty' -eq $_.MemberType }
+        | Where-Object { 'NoteProperty' -eq $_.MemberType }
 
     if ([String]::IsNullOrEmpty($PropertyName)) {
         return $properties
@@ -969,8 +974,8 @@ function Convert-MdTreeToHtml {
     Write-Output "<ul class=""contains-task-list"">"
 
     $properties = $InputObject.PsObject.Properties `
-        | where { $_.MemberType -eq 'NoteProperty' } `
-        | where { $_.Name.ToLower() -ne 'complete' }
+        | Where-Object { $_.MemberType -eq 'NoteProperty' } `
+        | Where-Object { $_.Name.ToLower() -ne 'complete' }
 
     foreach ($prop in $properties) {
         $value = $prop.Value

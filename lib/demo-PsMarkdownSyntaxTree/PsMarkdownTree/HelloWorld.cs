@@ -37,8 +37,9 @@ public class GetExpletiveCommand : Cmdlet
     private readonly string[] _adjectives = [
         "non-standard",
         "gormless",
-        "crusted",
         "rancid",
+        "crusted",
+        "glorpshit",
         "rotten",
     ];
 
