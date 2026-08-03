@@ -1,6 +1,30 @@
 # issue
 
-## completed
+## resolved
+
+- [x] 2026-08-02-200045
+  - where: ``Get-MarkdownTree``
+  - howto
+
+    ```powershell
+    "sched: est", "sched: uan", "sched: sin", "sched: ter" | get-markdowntree
+    ```
+
+  - actual
+
+    ```text
+    sched
+    -----
+    {@{est=}, @{uan=}}
+    ```
+
+  - expected
+
+    ```text
+    sched
+    -----
+    {@{est=}, @{uan=}, @{sin=}, @{ter=}}
+    ```
 
 - [x] 2025-03-01-173847
   - where: ``Get-MarkdownTree``, ``Object.ps1``

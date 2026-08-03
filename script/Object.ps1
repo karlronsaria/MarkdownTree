@@ -419,16 +419,18 @@ function Get-MarkdownTree {
                 return
             }
 
-            if (@($property.Value).Count -eq 1) {
-                $property.Value = @($property.Value)
+            if (@($property.Value).Count -eq 0) {
+                $property.Value = @($Value)
+                return
             }
 
-            if ((Test-EmptyObject $property.Value[-1])) {
-                $property.Value[-1] = @($Value)
-            }
-            else {
-                $property.Value += @($Value)
-            }
+            $property.Value =
+                if (@($property.Value).Count -eq 1 -and (Test-EmptyObject $property.Value)) {
+                    @($Value)
+                }
+                else {
+                    @($property.Value) + @($Value)
+                }
         }
 
         function Add-Table {
@@ -472,7 +474,7 @@ function Get-MarkdownTree {
             else {
                 # # todo: (karlr 2026-03-30): quick refactor
                 # $PrevLevel - 1
-                $PrevLevel
+                $PrevLevel - 1
             }
 
             Add-Property `
@@ -682,7 +684,7 @@ function Get-MarkdownTree {
             Process {
                 $level = $TableRow.Level
                 $content = $TableRow.Content
-
+                
                 if ($null -eq $stack[$level - 1] -and $null -eq $snippet) {
                     return 'Error'
                 }
