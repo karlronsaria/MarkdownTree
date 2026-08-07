@@ -368,6 +368,7 @@ f: str -> int -> tree
 Note: Inline or folded trees can escape the depth limit
 #>
 function Get-MarkdownTree {
+    [CmdletBinding(DefaultParameterSetName = 'AsTree')]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [String]
@@ -377,7 +378,16 @@ function Get-MarkdownTree {
         $DepthLimit = -1,
 
         [String[]]
-        $MuteProperty
+        $MuteProperty,
+
+        [Parameter(ParameterSetName = 'AsTable')]
+        [Alias('Table')]
+        [Switch]
+        $AsTable,
+
+        [Parameter(ParameterSetName = 'AsTable')]
+        [Swtich]
+        $BranchPropertyName = 'Name'
     )
 
     Begin {
@@ -684,7 +694,7 @@ function Get-MarkdownTree {
             Process {
                 $level = $TableRow.Level
                 $content = $TableRow.Content
-                
+
                 if ($null -eq $stack[$level - 1] -and $null -eq $snippet) {
                     return 'Error'
                 }
@@ -858,6 +868,59 @@ function Get-MarkdownTree {
             }
         }
 
+        function Remove-TrivialBranch {
+            Param(
+                [Parameter(ValueFromPipeline = $true)]
+                $InputObject
+            )
+
+            Process {
+                foreach ($tree in @($InputObject | Where-Object { $_ })) {
+                    $branch = $tree
+
+                    $props = $branch.PsObject.Properties |
+                        Where-Object { $_.MemberType -eq 'NoteProperty' }
+
+                    while (@($props).Count -eq 1) {
+                        $branch = @($props)[0].Value
+
+                        $props = $branch.PsObject.Properties |
+                            Where-Object { $_.MemberType -eq 'NoteProperty' }
+                    }
+
+                    $branch
+                }
+            }
+        }
+
+        function ConvertTo-Table {
+            Param(
+                [Parameter(ValueFromPipeline = $true)]
+                $InputObject,
+
+                [String]
+                $BranchPropertyName = 'Name'
+            )
+
+            Process {
+                foreach ($tree in @($InputObject | Where-Object { $_ })) {
+                    $props = $tree.PsObject.Properties |
+                        Where-Object { $_.MemberType -eq 'NoteProperty' }
+
+                    foreach ($prop in $props) {
+                        $row = $prop.Value
+
+                        $row | Add-Member `
+                            -MemberType 'NoteProperty' `
+                            -Name $BranchPropertyName `
+                            -Value $prop.Name
+
+                        $row
+                    }
+                }
+            }
+        }
+
         $content = @()
         $startLevel = $null
         $highestLevel = $null
@@ -882,7 +945,7 @@ function Get-MarkdownTree {
                 $_
             }
 
-        return $content `
+        $content = $content `
             | Where-Object {
                 $_.Type.Count -gt 0
             } `
@@ -895,6 +958,15 @@ function Get-MarkdownTree {
             | Where-Object {
                 -not (Test-EmptyObject $_)
             }
+
+        if ($AsTable) {
+            $content = $content `
+                | Remove-TrivialBranch `
+                | ConvertTo-Table `
+                    -BranchPropertyName $BranchPropertyName
+        }
+
+        $content
     }
 }
 

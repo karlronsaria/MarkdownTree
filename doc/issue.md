@@ -2,7 +2,7 @@
 
 ## resolved
 
-- [x] 2026-08-02-200045
+- [x] issue 2026-08-02-200045
   - where: ``Get-MarkdownTree``
   - howto
 
@@ -26,7 +26,7 @@
     {@{est=}, @{uan=}, @{sin=}, @{ter=}}
     ```
 
-- [x] 2025-03-01-173847
+- [x] issue 2025-03-01-173847
   - where: ``Get-MarkdownTree``, ``Object.ps1``
   - howto
     - in markdown file ``howto-vim.md``
@@ -74,7 +74,7 @@
       @{vim=}
       ```
 
-- [x] 2025-01-09-052828
+- [x] issue 2025-01-09-052828
   - howto
     - in powershell
 
