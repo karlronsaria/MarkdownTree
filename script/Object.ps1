@@ -7,9 +7,6 @@ function Write-MarkdownTree {
         [Parameter(ValueFromPipeline = $true)]
         $InputObject,
 
-        [Int]
-        $Level = 0,
-
         [Switch]
         $AsTree,
 
@@ -17,113 +14,163 @@ function Write-MarkdownTree {
         $BranchTables,
 
         [Switch]
-        $NoTables
-    )
+        $NoTables,
 
+        [int]
+        $HeadingLevels = 0,
+
+        [Int]
+        $Level = 0
+    )
+    
     Process {
         if ($null -eq $InputObject) {
             return
         }
 
-        switch ($InputObject) {
-            { $InputObject -is [Array] } {
-                foreach ($subitem in $InputObject) {
-                    if ($NoTables) {
-                        Write-MarkdownTree " " $Level -AsTree:$AsTree -NoTables:$NoTables
-                        Write-MarkdownTree $subitem ($Level + 1) -AsTree:$AsTree -NoTables:$NoTables
-                    }
-                    else {
-                        $table = $subitem | Write-MdTable
-                        Write-Output ""
+        if ($InputObject -is [Array]) {
+            if ($NoTables) {
+                Write-MarkdownTree `
+                    -InputObject " " `
+                    -Level $Level `
+                    -AsTree:$AsTree `
+                    -NoTables:$NoTables `
+                    -HeadingLevels:$HeadingLevels
 
-                        if ($BranchTables) {
-                            $lead = '- '
+                Write-MarkdownTree `
+                    -InputObject $subitem `
+                    -Level ($Level + 1) `
+                    -AsTree:$AsTree `
+                    -NoTables:$NoTables `
+                    -HeadingLevels:$HeadingLevels
+            }
+            else {
+                $table = $InputObject | Write-MdTable
+                Write-Output ""
 
-                            foreach ($row in $table) {
-                                Write-Output "$('  ' * $Level)$lead$row"
-                                $lead = '  '
-                            }
+                if ($BranchTables) {
+                    $lead = '- '
+
+                    foreach ($row in $table) {
+                        if ($HeadingLevels -ge 0) {
+                            Write-Output "$('  ' * ($Level - $HeadingLevels))$lead$row"
                         }
                         else {
-                            $table
+                            Write-Output "$('  ' * $Level)$lead$row"
                         }
 
+                        $lead = '  '
+                    }
+                }
+                else {
+                    $table
+                }
+
+                Write-Output ""
+            }
+
+            return
+        }
+        elseif ($InputObject -is [PsCustomObject]) {
+            $properties = $InputObject.
+                PsObject.
+                Properties |
+                Where-Object {
+                    'NoteProperty' -eq $_.MemberType
+                }
+
+            foreach ($property in $properties) {
+                if (-not $AsTree `
+                    -and $property.Name -eq 'complete' `
+                    -and $property.Value -is [Boolean])
+                {
+                    continue
+                }
+
+                if ($property.Name -eq 'list_subitem') {
+                    Write-MarkdownTree `
+                        -InputObject $property.Value `
+                        -Level $Level `
+                        -AsTree:$AsTree `
+                        -BranchTables:$BranchTables `
+                        -NoTables:$NoTables `
+                        -HeadingLevels:$HeadingLevels
+
+                    continue
+                }
+
+                $list = Write-MarkdownTree `
+                    -InputObject $property.Value `
+                    -Level ($Level + 1) `
+                    -AsTree:$AsTree `
+                    -BranchTables:$BranchTables `
+                    -NoTables:$NoTables `
+                    -HeadingLevels:$HeadingLevels
+
+                $inline =
+                    [String]::IsNullOrWhiteSpace($property.Name) `
+                    -and @($list).Count -gt 0
+
+                if ($inline) {
+                    Write-Output "- $($list[0].Trim())"
+                    Write-Output $list[1 .. ($list.Count - 1)]
+                    continue
+                }
+
+                $actionItemCapture = [PsCustomObject]@{
+                    Success = $false
+                }
+
+                $token = ''
+
+                if (-not $AsTree) {
+                    $actionItemCapture = $property.Value `
+                        | Get-NoteProperty `
+                            -PropertyName 'complete'
+
+                    $token =
+                        if ($actionItemCapture.Value) { 'x' } else { ' ' }
+                }
+
+                $content = if ($actionItemCapture.Success) {
+                    "[$token] $($property.Name)"
+                } else {
+                    $property.Name
+                }
+
+                if ($HeadingLevels -gt -1) {
+                    if ($Level -lt $HeadingLevels) {
+                        Write-Output "$('#' * ($Level + 1)) $content"
                         Write-Output ""
                     }
+                    else {
+                        Write-Output "$('  ' * ($Level - $HeadingLevels))- $content"
+                    }
                 }
-            }
-
-            { $InputObject -is [PsCustomObject] } {
-                $properties = $InputObject.
-                    PsObject.
-                    Properties |
-                    Where-Object {
-                        'NoteProperty' -eq $_.MemberType
-                    }
-
-                foreach ($property in $properties) {
-                    if (-not $AsTree `
-                        -and $property.Name -eq 'complete' `
-                        -and $property.Value -is [Boolean])
-                    {
-                        continue
-                    }
-
-                    if ($property.Name -eq 'list_subitem') {
-                        Write-MarkdownTree `
-                            -InputObject $property.Value `
-                            -Level $Level `
-                            -AsTree:$AsTree `
-                            -NoTables:$NoTables
-
-                        continue
-                    }
-
-                    $list = Write-MarkdownTree `
-                        -InputObject $property.Value `
-                        -Level ($Level + 1) `
-                        -AsTree:$AsTree `
-                        -NoTables:$NoTables
-
-                    $inline =
-                        [String]::IsNullOrWhiteSpace($property.Name) `
-                        -and @($list).Count -gt 0
-
-                    if ($inline) {
-                        Write-Output "- $($list[0].Trim())"
-                        Write-Output $list[1 .. ($list.Count - 1)]
-                        continue
-                    }
-
-                    $actionItemCapture = [PsCustomObject]@{
-                        Success = $false
-                    }
-
-                    $token = ''
-
-                    if (-not $AsTree) {
-                        $actionItemCapture = $property.Value `
-                            | Get-NoteProperty `
-                                -PropertyName 'complete'
-
-                        $token =
-                            if ($actionItemCapture.Value) { 'x' } else { ' ' }
-                    }
-
-                    $content = if ($actionItemCapture.Success) {
-                        "[$token] $($property.Name)"
-                    } else {
-                        $property.Name
-                    }
-
+                else {
                     Write-Output "$('  ' * $Level)- $content"
-                    Write-Output $list
                 }
+
+                Write-Output $list
             }
 
-            default {
+            return
+        }
+        else {
+            if (@($HeadingLevels).Count -gt 0) {
+                if ($Level -in @($HeadingLevels)) {
+                    Write-Output "$('#' * ($Level + 1)) $InputObject"
+                    Write-Output ""
+                }
+                else {
+                    Write-Output "$('  ' * ($Level - $HeadingLevels))- $InputObject"
+                }
+            }
+            else {
                 Write-Output "$('  ' * $Level)- $InputObject"
             }
+
+            return
         }
     }
 }
@@ -386,7 +433,7 @@ function Get-MarkdownTree {
         $AsTable,
 
         [Parameter(ParameterSetName = 'AsTable')]
-        [Swtich]
+        [String]
         $BranchPropertyName = 'Name'
     )
 
@@ -522,7 +569,7 @@ function Get-MarkdownTree {
                 $indent = $capture.Groups['indent']
                 $content = $capture.Groups['content']
                 $type = @()
-
+                
                 if (-not $inCodeBlock) {
                     $indentNumber = $indent.Length / $tabSize
                 }

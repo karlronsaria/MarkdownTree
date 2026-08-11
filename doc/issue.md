@@ -2,6 +2,77 @@
 
 ## resolved
 
+- [x] issue 2026-08-08-141404
+  - howto
+
+    ```powershell
+    cat .\test\mock_-_2026-08-02_HeadingHeadingTable.md | Get-MarkdownTree | Write-MarkdownTree
+    ```
+
+  - actual
+
+    ```text
+    - heading 1
+      - heading 2
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000000 | est        | 0000-01-01 | est   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000001 | uan        | 0000-01-01 | uan   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000002 | sin        | 0000-01-01 | sin   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000000 | est        | 0000-01-01 | est   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000001 | uan        | 0000-01-01 | uan   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000002 | sin        | 0000-01-01 | sin   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000000 | est        | 0000-01-01 | est   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000001 | uan        | 0000-01-01 | uan   |
+    
+    
+    | id       | descriptor | retrieved  | model |
+    | -------- | ---------- | ---------- | ----- |
+    | 00000002 | sin        | 0000-01-01 | sin   |
+    ```
+
+  - expected
+
+    ```text
+    - heading 1
+      - heading 2
+    
+        | id | descriptor | retrieved | model |
+        |----|------------|-----------|-------|
+        | 00000000 | est | 0000-01-01 | est |
+        | 00000001 | uan | 0000-01-01 | uan |
+        | 00000002 | sin | 0000-01-01 | sin |
+    ```
+
 - [x] issue 2026-08-02-200045
   - where: ``Get-MarkdownTree``
   - howto
