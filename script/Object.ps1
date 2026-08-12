@@ -1,3 +1,28 @@
+function Remove-TrivialBranch {
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        $InputObject
+    )
+
+    Process {
+        foreach ($tree in @($InputObject | Where-Object { $_ })) {
+            $branch = $tree
+
+            $props = $branch.PsObject.Properties |
+                Where-Object { $_.MemberType -eq 'NoteProperty' }
+
+            while (@($props).Count -eq 1) {
+                $branch = @($props)[0].Value
+
+                $props = $branch.PsObject.Properties |
+                    Where-Object { $_.MemberType -eq 'NoteProperty' }
+            }
+
+            $branch
+        }
+    }
+}
+
 <#
 .SYNOPSIS
 f: tree -> markdown
@@ -23,6 +48,10 @@ function Write-MarkdownTree {
         $Level = 0
     )
     
+    Begin {
+        $followsBlank = $true
+    }
+    
     Process {
         if ($null -eq $InputObject) {
             return
@@ -46,7 +75,10 @@ function Write-MarkdownTree {
             }
             else {
                 $table = $InputObject | Write-MdTable
-                Write-Output ""
+                
+                if (-not $followsBlank) {
+                    Write-Output ""
+                }
 
                 if ($BranchTables) {
                     $lead = '- '
@@ -67,11 +99,14 @@ function Write-MarkdownTree {
                 }
 
                 Write-Output ""
+                $followsBlank = $true
             }
 
             return
         }
         elseif ($InputObject -is [PsCustomObject]) {
+            $followsBlank = $false
+
             $properties = $InputObject.
                 PsObject.
                 Properties |
@@ -142,6 +177,7 @@ function Write-MarkdownTree {
                     if ($Level -lt $HeadingLevels) {
                         Write-Output "$('#' * ($Level + 1)) $content"
                         Write-Output ""
+                        $followsBlank = $true
                     }
                     else {
                         Write-Output "$('  ' * ($Level - $HeadingLevels))- $content"
@@ -157,10 +193,13 @@ function Write-MarkdownTree {
             return
         }
         else {
+            $followsBlank = $false
+
             if (@($HeadingLevels).Count -gt 0) {
                 if ($Level -in @($HeadingLevels)) {
                     Write-Output "$('#' * ($Level + 1)) $InputObject"
                     Write-Output ""
+                    $followsBlank = $true
                 }
                 else {
                     Write-Output "$('  ' * ($Level - $HeadingLevels))- $InputObject"
@@ -912,31 +951,6 @@ function Get-MarkdownTree {
 
                 Convert-LeafToString $stack[0]
                 return $stack[0]
-            }
-        }
-
-        function Remove-TrivialBranch {
-            Param(
-                [Parameter(ValueFromPipeline = $true)]
-                $InputObject
-            )
-
-            Process {
-                foreach ($tree in @($InputObject | Where-Object { $_ })) {
-                    $branch = $tree
-
-                    $props = $branch.PsObject.Properties |
-                        Where-Object { $_.MemberType -eq 'NoteProperty' }
-
-                    while (@($props).Count -eq 1) {
-                        $branch = @($props)[0].Value
-
-                        $props = $branch.PsObject.Properties |
-                            Where-Object { $_.MemberType -eq 'NoteProperty' }
-                    }
-
-                    $branch
-                }
             }
         }
 
