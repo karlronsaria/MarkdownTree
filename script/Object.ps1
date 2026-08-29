@@ -450,10 +450,12 @@ function Get-SubtreeRotation {
 .SYNOPSIS
 f: str -> tree
 f: str -> int -> tree
+.DESCRIPTION
+(karlr 2026-08-28): Deprecated. Use PsMarkdownTree.dll instead.
 .PARAMETER DepthLimit
 Note: Inline or folded trees can escape the depth limit
 #>
-function Get-MarkdownTree {
+function Get-MarkdownTree_Deprecated {
     [CmdletBinding(DefaultParameterSetName = 'AsTree')]
     Param(
         [Parameter(ValueFromPipeline = $true)]
