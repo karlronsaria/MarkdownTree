@@ -594,17 +594,17 @@ function Get-MarkdownTree {
 
             Begin {
                 $pattern =
-                    '^(?<indent>\s*)((?<header>#+)|(?<branch_start>\-|\*|\d+\.)\s)?\s*(?<content>.+)?$'
+                    '^(?<indent>\s*)((?<heading>#+)|(?<branch_start>\-|\*|\d+\.)\s)?\s*(?<content>.+)?$'
                 $inCodeBlock = $false
                 $tabSize = 2
-                $headerNumber = 0
+                $headingNumber = 0
                 $indentNumber = 0
                 $level = 0
             }
 
             Process {
                 $capture = [Regex]::Match($Line, $pattern)
-                $header = $capture.Groups['header']
+                $heading = $capture.Groups['heading']
                 $indent = $capture.Groups['indent']
                 $content = $capture.Groups['content']
                 $type = @()
@@ -631,16 +631,14 @@ function Get-MarkdownTree {
                             @('UngraftedRow')
                         }
                     }
-                    elseif ($header.Success) {
-                        @('Header')
+                    elseif ($heading.Success) {
+                        @('Heading')
                     }
                     else {
                         @()
                     }
 
-                    if ('Header' -notin $type `
-                        -and $content.Success
-                    ) {
+                    if ('Heading' -notin $type -and $content.Success) {
                         if (($content.Value | Test-MdTable)) {
                             $type += @('TableRow')
                         }
@@ -659,12 +657,12 @@ function Get-MarkdownTree {
                 }
 
                 if (-not $inCodeBlock) {
-                    if ('Header' -in $type) {
-                        $headerNumber = $header.Length
+                    if ('Heading' -in $type) {
+                        $headingNumber = $heading.Length
                     }
                 }
 
-                $level = $headerNumber + $indentNumber + $(if ('Header' -in $type) { 0 } else { 1 })
+                $level = $headingNumber + $indentNumber + $(if ('Heading' -in $type) { 0 } else { 1 })
 
                 return [PsCustomObject]@{
                     Level = $level
@@ -672,6 +670,35 @@ function Get-MarkdownTree {
                     Content = $content.Value
                     IndentLength = $indent.Length
                 }
+            }
+        }
+        
+        function Get-InlineBranch {
+            Param(
+                [Parameter(ValueFromPipeline = $true)]
+                [pscustomobject]
+                $InputObject
+            )
+            
+            Begin {
+                $stack = @()
+                $count = 0
+            }
+
+            Process {
+                if ('Heading' -in @($InputObject.Type)) {
+                    $stack = @($InputObject.Level)
+                    $count = 1
+                }
+                else {
+                    
+                }
+
+                $capture = [Regex]::Match(
+                    $InputObject.Content,
+                    "^\s*(\[(?<check>x| )\] )?((?<key>[^:`"]+)\s*:\s+)?(?<value>.*)?\s*$"
+                )
+                
             }
         }
 
@@ -785,11 +812,6 @@ function Get-MarkdownTree {
                     return 'Error'
                 }
 
-                $capture = [Regex]::Match(
-                    $content,
-                    "^\s*(\[(?<check>x| )\] )?((?<key>[^:`"]+)\s*:\s+)?(?<value>.*)?\s*$"
-                )
-
                 # if ($level -lt $prevLevel) {
                 #     # todo
                 #     Convert-LeafToString $stack[$prevLevel]
@@ -865,6 +887,11 @@ function Get-MarkdownTree {
 
                     return
                 }
+
+                $capture = [Regex]::Match(
+                    $content,
+                    "^\s*(\[(?<check>x| )\] )?((?<key>[^:`"]+)\s*:\s+)?(?<value>.*)?\s*$"
+                )
 
                 $checkGroup = $capture.Groups['check']
 

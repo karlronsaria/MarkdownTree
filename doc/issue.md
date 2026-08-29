@@ -1,6 +1,62 @@
 # issue
 
+- [ ] issue 2026-08-17-203354
+  - description: table after an inline branch fails
+  - howto
+  
+    ```powershell
+    cat .\mock_-_2026-08-17_HeadingInlineTable.md | Get-MarkdownTree | Write-MarkdownTree
+    ```
+
+  - actual
+
+    ```text
+    - matrix 1
+      - Minecraft Club
+    - matrix 2
+      - Minecraft Club
+        - Description
+          - user
+            - sin ter
+          - ItemId
+            - 2026-07-29-004942
+          - mail
+            - sinter@mail.com
+    ```
+
+  - expected
+  
+    ```text
+    - matrix 1
+      - Minecraft Club
+        - user
+          - sin ter
+        - ItemId
+          - 2026-07-29-004942
+        - mail
+          - sinter@mail.com
+    - matrix 2
+      - Minecraft Club
+        - Description
+          - user
+            - sin ter
+          - ItemId
+            - 2026-07-29-004942
+          - mail
+            - sinter@mail.com
+    ```
+
 ## resolved
+
+- [x] issue 2026-08-28-020403
+  - howto
+
+    ```powershell
+    get-item ".\bin\Release\net9.0\PsMarkdownTree.dll" | foreach { ipmo $_.FullName }
+    "~~est\~~" | Get-MarkdownTree
+    ```
+
+  - actual: hung terminal
 
 - [x] issue 2026-08-11-192838
   - description: double-spacing, unnecessary blank lines
