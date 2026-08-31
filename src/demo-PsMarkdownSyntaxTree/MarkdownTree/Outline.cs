@@ -1,4 +1,5 @@
 ﻿using MarkdownTree.Lex;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text.RegularExpressions;
 
 namespace MarkdownTree.Parse;
@@ -117,8 +118,8 @@ public abstract class Branching(int lineNumber) : ITree, IHaystack
             return this;
 
         foreach (ITree child in Children)
-            if (predicate(child))
-                return child;
+            if (child is Branching branch)
+                return branch.WhereFirst(predicate);
 
         return null;
     }
@@ -141,7 +142,64 @@ public abstract class Branching(int lineNumber) : ITree, IHaystack
         yield return callback(this);
 
         foreach (ITree child in Children)
-            yield return callback(child);
+            if (child is Branching branch)
+                foreach (T subresult in branch.ForEach(callback))
+                    yield return subresult;
+    }
+
+    public IEnumerable<object> ForEach(Callback<object> callback)
+    {
+        return ForEach<object>(callback);
+    }
+
+    public ITree? Next() =>
+        WhereFirst(t => {
+            if (t is Branching branch)
+                return branch.Children.Count > 1;
+
+            return false;
+        });
+
+    public List<int>? PathOfFirst(Predicate predicate)
+    {
+        if (predicate(this))
+            return [];
+
+        for (int i = 0; i < Children.Count; i++)
+        {
+            if (Children[i] is Branching branch)
+            {
+                List<int>? tail = branch.PathOfFirst(predicate);
+
+                if (tail != null)
+                {
+                    List<int> head = [i];
+                    head.AddRange();
+                    return head;
+                }
+
+            }
+        }
+
+        return null;
+    }
+
+    public IEnumerable<List<int>?> PathOfAll(Predicate predicate)
+    {
+        if (predicate(this))
+            yield return [];
+
+        for (int i = 0; i < Children.Count; i++)
+            if (Children[i] is Branching branch)
+                foreach (List<int>? tail in branch.PathOfAll(predicate))
+                    if (tail != null)
+                    {
+                        List<int> head = [i];
+                        head.AddRange(tail);
+                        yield return head;
+                    }
+
+        yield return null;
     }
 }
 
