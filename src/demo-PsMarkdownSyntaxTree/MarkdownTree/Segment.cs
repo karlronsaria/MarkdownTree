@@ -206,20 +206,20 @@ public static partial class Segments
         Row row = [];
         Sequence cell = [];
 
-        (bool success, ISegment? branch) = Scan(tokens, t => t.Type != TokenType.Bar);
+        (bool success, ISegment? branch) = Scan(tokens, t => t.TokenType != TokenType.Bar);
 
         while (success) // &= tokens.MoveNext())
         {
             if (branch is ISegment inline)
                 cell.Add(inline);
 
-            if (tokens.Current.Type == TokenType.Bar && cell.Count > 0)
+            if (tokens.Current.TokenType == TokenType.Bar && cell.Count > 0)
             {
                 row.Add(cell);
                 cell = [];
             }
 
-            (success, branch) = Scan(tokens, t => t.Type != TokenType.Bar);
+            (success, branch) = Scan(tokens, t => t.TokenType != TokenType.Bar);
         }
 
         return (row, tokens);
@@ -229,12 +229,12 @@ public static partial class Segments
     ScanLinkText(IEnumerator<Token> tokens, bool moveNext = true)
     {
         ISegment fail = new Leaf(tokens.Current);
-        ((Leaf)fail).Type = TokenType.Text;
+        ((Leaf)fail).TokenType = TokenType.Text;
 
         IList<ISegment> box = [];
         bool any = !moveNext || tokens.MoveNext();
 
-        while (any && tokens.Current.Type != TokenType.CloseBox)
+        while (any && tokens.Current.TokenType != TokenType.CloseBox)
         {
             box.Add(new Leaf(tokens.Current));
             any = tokens.MoveNext();
@@ -245,13 +245,13 @@ public static partial class Segments
 
         any = tokens.MoveNext();
 
-        if (!any || tokens.Current.Type != TokenType.OpenLink)
+        if (!any || tokens.Current.TokenType != TokenType.OpenLink)
             return (fail, null);
 
         IList<ISegment> link = [];
         any = tokens.MoveNext();
 
-        while (any && tokens.Current.Type != TokenType.CloseLink)
+        while (any && tokens.Current.TokenType != TokenType.CloseLink)
         {
             link.Add(new Leaf(tokens.Current));
             any = tokens.MoveNext();
@@ -282,7 +282,7 @@ public static partial class Segments
         {
             current = tokens.Current;
 
-            switch (current.Type)
+            switch (current.TokenType)
             {
                 case TokenType.Text:
                     texts.Add(current);
@@ -302,7 +302,7 @@ public static partial class Segments
                     break;
             }
 
-            switch (current.Type)
+            switch (current.TokenType)
             {
                 case TokenType.Colon:
                     (_, ISegment? tempHead) = Scan(tokens, scannable);

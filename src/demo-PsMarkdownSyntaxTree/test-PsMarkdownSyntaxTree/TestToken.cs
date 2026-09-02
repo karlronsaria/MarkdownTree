@@ -18,7 +18,7 @@ public class TestToken
         return $"{lex.Type}{status}[{content}]";
     }
 
-    private static string TestString(Token token) => $"{token.Type}[{token.Content}]";
+    private static string TestString(Token token) => $"{token.TokenType}[{token.Content}]";
 
     [SetUp]
     public void Setup()

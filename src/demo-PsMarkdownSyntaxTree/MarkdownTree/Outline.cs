@@ -29,11 +29,11 @@ public interface IHaystack
     public IEnumerable<IHaystack> IsA(Type type) =>
         FindAll(type switch
         {
-            Type.String => (i => i.Type == TokenType.String),
-            Type.Text => (i => i.Type == TokenType.Text),
-            Type.Hyperlink => (i => i.Type == TokenType.Hyperlink),
-            Type.Strike => (i => i.Type == TokenType.Strike),
-            Type.InlineCode => (i => i.Type == TokenType.InlineCode),
+            Type.String => (i => i.TokenType == TokenType.String),
+            Type.Text => (i => i.TokenType == TokenType.Text),
+            Type.Hyperlink => (i => i.TokenType == TokenType.Hyperlink),
+            Type.Strike => (i => i.TokenType == TokenType.Strike),
+            Type.InlineCode => (i => i.TokenType == TokenType.InlineCode),
             _ => (_ => false),
         });
 }
@@ -184,7 +184,7 @@ public abstract class Branching(int lineNumber) : ITree, IHaystack
         return null;
     }
 
-    public IEnumerable<List<int>?> PathOfAll(Predicate predicate)
+    public IEnumerable<List<int>> PathOfAll(Predicate predicate)
     {
         if (predicate(this))
             yield return [];
@@ -198,8 +198,6 @@ public abstract class Branching(int lineNumber) : ITree, IHaystack
                         head.AddRange(tail);
                         yield return head;
                     }
-
-        yield return null;
     }
 }
 

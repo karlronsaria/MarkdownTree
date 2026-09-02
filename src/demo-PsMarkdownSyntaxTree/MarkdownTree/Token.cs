@@ -37,14 +37,14 @@ public class Token
     public Token(Token token)
     {
         Success = token.Success;
-        Type = token.Type;
+        TokenType = token.TokenType;
         Content = token.Content;
         Start = token.Start;
         End = token.End;
     }
 
     public bool Success { get; set; }
-    public TokenType Type { get; set; } = TokenType.Text;
+    public TokenType TokenType { get; set; } = TokenType.Text;
     public string Content { get; set; } = string.Empty;
     public int Start { get; set; }
     public int End { get; set; }
@@ -54,7 +54,7 @@ public class Token
     public const char DEFAULT_ESCAPE_CHAR = '\\';
 
     public override string ToString() =>
-        Type switch {
+        TokenType switch {
             TokenType.NewLine => "\n", // \n
             TokenType.String => $"\"{Content}\"", // "
             TokenType.Escape => Content, // \
@@ -104,7 +104,7 @@ public class Token
             {
                 '\n' => new Token
                 {
-                    Type = TokenType.NewLine,
+                    TokenType = TokenType.NewLine,
                     Start = start,
                     End = start + 1,
                 },
@@ -112,7 +112,7 @@ public class Token
                     ? new Token
                     {
                         Success = true,
-                        Type = TokenType.Bar,
+                        TokenType = TokenType.Bar,
                         Start = start,
                         End = start + 1,
                     }
@@ -121,7 +121,7 @@ public class Token
                     ? new Token
                     {
                         Success = true,
-                        Type = TokenType.Escape,
+                        TokenType = TokenType.Escape,
                         Content = $"\\{input[start + 1]}",
                         Start = start,
                         End = start + 2,
@@ -131,7 +131,7 @@ public class Token
                     ? new Token
                     {
                         Success = true,
-                        Type = TokenType.Colon,
+                        TokenType = TokenType.Colon,
                         Content = $":{input[start + 1]}",
                         Start = start,
                         End = start + 2,
@@ -151,7 +151,7 @@ public class Token
                 '>' => new Token
                     {
                         Success = true,
-                        Type = TokenType.CloseHyperlink,
+                        TokenType = TokenType.CloseHyperlink,
                         Content = ">",
                         Start = start,
                         End = start + 1,
@@ -159,7 +159,7 @@ public class Token
                 '[' => new Token
                     {
                         Success = true,
-                        Type = TokenType.OpenBox,
+                        TokenType = TokenType.OpenBox,
                         Content = "[",
                         Start = start,
                         End = start + 1,
@@ -167,7 +167,7 @@ public class Token
                 ']' => new Token
                     {
                         Success = true,
-                        Type = TokenType.CloseBox,
+                        TokenType = TokenType.CloseBox,
                         Content = "]",
                         Start = start,
                         End = start + 1,
@@ -175,7 +175,7 @@ public class Token
                 '(' => new Token
                     {
                         Success = true,
-                        Type = TokenType.OpenLink,
+                        TokenType = TokenType.OpenLink,
                         Content = "(",
                         Start = start,
                         End = start + 1,
@@ -183,7 +183,7 @@ public class Token
                 ')' => new Token
                     {
                         Success = true,
-                        Type = TokenType.CloseLink,
+                        TokenType = TokenType.CloseLink,
                         Content = ")",
                         Start = start,
                         End = start + 1,
@@ -206,7 +206,7 @@ public class Token
                     yield return new Token
                     {
                         Success = true,
-                        Type = TokenType.Text,
+                        TokenType = TokenType.Text,
                         Content = input[textStart..token.Start],
                         Start = textStart,
                         End = token.Start + 1,
@@ -223,7 +223,7 @@ public class Token
                     yield return new Token
                     {
                         Success = true,
-                        Type = TokenType.Text,
+                        TokenType = TokenType.Text,
                         Content = input[textStart..start], // (start + 1)
                         Start = textStart,
                         End = start,
@@ -233,7 +233,7 @@ public class Token
                 yield return new Token
                 {
                     Success = true,
-                    Type = TokenType.Text,
+                    TokenType = TokenType.Text,
                     Content = token.Content,
                     Start = start,
                     End = token.End,
@@ -252,7 +252,7 @@ public class Token
             yield return new Token
             {
                 Success = true,
-                Type = TokenType.Text,
+                TokenType = TokenType.Text,
                 Content = input[textStart..start], // (start + 1)
                 Start = textStart,
                 End = start,
@@ -262,7 +262,7 @@ public class Token
         yield return new Token
         {
             Success = true,
-            Type = TokenType.EndOfLine,
+            TokenType = TokenType.EndOfLine,
             Start = start,
             End = start,
         };
@@ -280,7 +280,7 @@ public class Token
             return new Token
             {
                 Success = false,
-                Type = type,
+                TokenType = type,
                 Content = "`",
                 Start = start,
                 End = next, // Do not consume
@@ -291,7 +291,7 @@ public class Token
         var failToken = new Token
         {
             Success = false,
-            Type = type,
+            TokenType = type,
             Content = "``",
             Start = start,
             End = next + 1,
@@ -309,7 +309,7 @@ public class Token
         return new Token
         {
             Success = success,
-            Type = type,
+            TokenType = type,
             Content = token.Content,
             Start = start,
             End = next + 1,
@@ -326,7 +326,7 @@ public class Token
             return new Token
             {
                 Success = false,
-                Type = type,
+                TokenType = type,
                 Content = "~",
                 Start = start,
                 End = next, // Do not consume
@@ -337,7 +337,7 @@ public class Token
         var fail = new Token
         {
             Success = false,
-            Type = type,
+            TokenType = type,
             Content = "~~",
             Start = start,
             End = next + 1,
@@ -355,7 +355,7 @@ public class Token
         return new Token
         {
             Success = success,
-            Type = type,
+            TokenType = type,
             Content = token.Content,
             Start = start,
             End = next + 1,
@@ -379,7 +379,7 @@ public class Token
         return new Token
         {
             Success = success,
-            Type = type,
+            TokenType = type,
             Content = input[
                 (success ? next : start) .. (!success && end < input.Length ? end + 1 : end)
             ], // end],
@@ -420,7 +420,7 @@ public class Token
         return new Token
         {
             Success = true,
-            Type = TokenType.WhiteSpace,
+            TokenType = TokenType.WhiteSpace,
             Content = input[start..end],
             Start = start,
             End = end,

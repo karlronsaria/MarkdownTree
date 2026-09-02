@@ -6,12 +6,45 @@ using MarkdownTree.Parse;
 
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Linq;
+
+// // (karlr 2026-09-01)
+// foreach (var path in
+//     from Outline tree in Outline.Scan([
+//         "# howto: ImageMagick Auto-trim",
+//         "",
+//         "Remove edges by color of each corner pixel",
+//         "",
+//         "## link",
+//         "",
+//         "- url: <https://www.imagemagick.org/script/command-line-options.php#trim>",
+//         "- retrieved: 2023-12-12",
+//         "",
+//         "## example",
+//         "",
+//         "```shell",
+//         "magick convert -trim +repage *.png",
+//         "```",
+//     ])
+//     from path in tree.CascadeUnfold().CascadeMerge().PathOfAll(b =>
+//     {
+//         if (b is Outline branch)
+//             return branch.Content.WhereAll(s => s.TokenType == TokenType.Hyperlink).ToList().Count != 0;
+// 
+//         return false;
+//     })
+//     select path
+// ) {
+//     Console.Write(string.Join(" ", path));
+// }
+// 
+// Console.WriteLine();
 
 
-// (karlr 2026-08-28)
-foreach (Outline tree in Outline.Scan(["~~vscode\\~~"]))
-    foreach (var item in tree.ToMarkdown())
-        Console.WriteLine(item);
+// // (karlr 2026-08-28)
+// foreach (Outline tree in Outline.Scan(["~~vscode\\~~"]))
+//     foreach (var item in tree.ToMarkdown())
+//         Console.WriteLine(item);
 
 return;
 
