@@ -565,7 +565,10 @@ public class GetMarkdownTreeCommand : Cmdlet
                 var subobj = new PSObject();
 
                 for (int i = 0; i < headings.Count; ++i)
-                    subobj.Members.Add(new PSNoteProperty(headings[i], cells[i]));
+                {
+                    string cell = i < cells.Count ? cells[i] : string.Empty;
+                    subobj.Members.Add(new PSNoteProperty(headings[i], cell));
+                }
 
                 rows.Add(subobj);
             }
