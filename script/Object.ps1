@@ -26,8 +26,10 @@ function Remove-TrivialBranch {
 <#
 .SYNOPSIS
 f: tree -> markdown
+.DESCRIPTION
+(karlr 2026-08-28): Deprecated. Use PsMarkdownTree.dll instead.
 #>
-function Write-MarkdownTree {
+function Write-MarkdownTree_Deprecated {
     Param(
         [Parameter(ValueFromPipeline = $true)]
         $InputObject,
@@ -59,14 +61,14 @@ function Write-MarkdownTree {
 
         if ($InputObject -is [Array]) {
             if ($NoTables) {
-                Write-MarkdownTree `
+                Write-MarkdownTree_Deprecated `
                     -InputObject " " `
                     -Level $Level `
                     -AsTree:$AsTree `
                     -NoTables:$NoTables `
                     -HeadingLevels:$HeadingLevels
 
-                Write-MarkdownTree `
+                Write-MarkdownTree_Deprecated `
                     -InputObject $subitem `
                     -Level ($Level + 1) `
                     -AsTree:$AsTree `
@@ -123,7 +125,7 @@ function Write-MarkdownTree {
                 }
 
                 if ($property.Name -eq 'list_subitem') {
-                    Write-MarkdownTree `
+                    Write-MarkdownTree_Deprecated `
                         -InputObject $property.Value `
                         -Level $Level `
                         -AsTree:$AsTree `
@@ -134,7 +136,7 @@ function Write-MarkdownTree {
                     continue
                 }
 
-                $list = Write-MarkdownTree `
+                $list = Write-MarkdownTree_Deprecated `
                     -InputObject $property.Value `
                     -Level ($Level + 1) `
                     -AsTree:$AsTree `
