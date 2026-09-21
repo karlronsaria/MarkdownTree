@@ -79,7 +79,7 @@ public class TestOutline
                     "            Paragraph(This and my heart and all the fields)",
                     "    UnorderedList(ter ius ira)",
                     "  Heading(veh)",
-                    "    UnorderedList(eme nti)",
+                    "    Heading(eme nti)",
                     "      Paragraph(And all the meadows wide)",
                 ],
                 [
@@ -94,7 +94,7 @@ public class TestOutline
                     "            Paragraph(This and my heart and all the fields)",
                     "    UnorderedList(ter ius ira)",
                     "  Heading(veh)",
-                    "    UnorderedList(eme nti)",
+                    "    Heading(eme nti)",
                     "      Paragraph(And all the meadows wide)",
                 ],
                 [
@@ -120,7 +120,7 @@ public class TestOutline
                     "            Paragraph(This and my heart and all the fields)",
                     "    UnorderedList(ter ius ira)",
                     "  Heading(veh)",
-                    "    UnorderedList(eme nti)",
+                    "    Heading(eme nti)",
                     "      Paragraph(And all the meadows wide)",
                 ]
             ),
@@ -219,10 +219,10 @@ public class TestOutline
                 ],
                 [
                     "Heading(est uan sin)",
-                    "  UnorderedList(est)",
-                    "    UnorderedList(uan)",
-                    "      UnorderedList(sin)",
-                    "        UnorderedList(ter)",
+                    "  Heading(est)",
+                    "    Heading(uan)",
+                    "      Heading(sin)",
+                    "        Heading(ter)",
                     "          Paragraph(Why)",
                     "          Paragraph(do)",
                     "          Paragraph(they)",
@@ -301,15 +301,15 @@ public class TestOutline
                 ],
                 [
                     "Heading(est uan sin)",
-                    "  UnorderedList(est)",
-                    "    UnorderedList(uan)",
-                    "      UnorderedList(sin)",
-                    "        UnorderedList(ter)",
-                    "          UnorderedList(ius)",
-                    "            UnorderedList(ira)",
-                    "              UnorderedList(veh)",
-                    "                UnorderedList(eme)",
-                    "                  UnorderedList(nti)",
+                    "  Heading(est)",
+                    "    Heading(uan)",
+                    "      Heading(sin)",
+                    "        Heading(ter)",
+                    "          Heading(ius)",
+                    "            Heading(ira)",
+                    "              Heading(veh)",
+                    "                Heading(eme)",
+                    "                  Heading(nti)",
                     "                    Paragraph(Hello)",
                     "                    Paragraph(Mario)",
                 ]
@@ -385,7 +385,7 @@ public class TestOutline
                     "            Paragraph(This and my heart and all the fields)",
                     "    UnorderedList(ter ius ira)",
                     "  Heading(veh)",
-                    "    UnorderedList(eme nti)",
+                    "    Heading(eme nti)",
                     "      Paragraph(And all the meadows wide)",
                     "        javascript(function what() {)",
                     "        javascript(    console.log(\"what\"))",
@@ -411,7 +411,7 @@ public class TestOutline
                     "            Paragraph(This and my heart and all the fields)",
                     "    UnorderedList(ter ius ira)",
                     "  Heading(veh)",
-                    "    UnorderedList(eme nti)",
+                    "    Heading(eme nti)",
                     "      Paragraph(And all the meadows wide)",
                     "        javascript(function what() {)",
                     "        javascript(    console.log(\"what\"))",
@@ -458,7 +458,7 @@ public class TestOutline
                     "            Paragraph(This and my heart and all the fields)",
                     "    UnorderedList(ter ius ira)",
                     "  Heading(veh)",
-                    "    UnorderedList(eme nti)",
+                    "    Heading(eme nti)",
                     "      Paragraph(And all the meadows wide)",
                     "        javascript(function what() {)",
                     "        javascript(    console.log(\"what\"))",
@@ -496,7 +496,7 @@ public class TestOutline
                 ],
                 [
                     "Heading(``est``)",
-                    "  UnorderedList(uan sin)",
+                    "  Heading(uan sin)",
                     "    UnorderedList(``est``)",
                     "      UnorderedList(uan sin)",
                     "        UnorderedList(``est``)",
@@ -504,7 +504,7 @@ public class TestOutline
                     "    UnorderedList(``est``)",
                     "      UnorderedList(uan sin)",
                     "    Heading(``est``)",
-                    "      UnorderedList(uan sin)",
+                    "      Heading(uan sin)",
                     "        UnorderedList(``est``)",
                     "          UnorderedList(uan sin)",
                     "            UnorderedList(``est``)",
@@ -514,13 +514,13 @@ public class TestOutline
                 ],
                 [
                     "Heading(``est``)",
-                    "  UnorderedList(uan sin)",
+                    "  Heading(uan sin)",
                     "    UnorderedList(``est``)",
                     "      UnorderedList(uan sin)",
                     "        UnorderedList(``est``)",
                     "          UnorderedList(uan sin)",
                     "    Heading(``est``)",
-                    "      UnorderedList(uan sin)",
+                    "      Heading(uan sin)",
                     "        UnorderedList(``est``)",
                     "          UnorderedList(uan sin)",
                     "            UnorderedList(``est``)",
@@ -533,19 +533,72 @@ public class TestOutline
                 ],
                 [
                     "Heading(``est``)",
-                    "  UnorderedList(uan sin)",
+                    "  Heading(uan sin)",
                     "    UnorderedList(``est``)",
                     "      UnorderedList(uan sin)",
                     "        UnorderedList(``est``)",
                     "          UnorderedList(uan sin)",
                     "    Heading(``est``)",
-                    "      UnorderedList(uan sin)",
-                    "        UnorderedList(``est``)",
-                    "          UnorderedList(uan sin)",
-                    "            UnorderedList(``est``)",
-                    "              UnorderedList(uan sin)",
+                    "      Heading(uan sin)",
+                    "        Heading(``est``)",
+                    "          Heading(uan sin)",
+                    "            Heading(``est``)",
+                    "              Heading(uan sin)",
                 ]
-            )
+            ),
+            (
+                [
+                    "# matrix 2026-09-16-030255: Minecraft Club",
+                    "",
+                    "| itemid | when | who | descriptor | mail |",
+                    "|--------|------|-----|------------|------|",
+                    "| est    | uan  | sin | ter        | ius  |",
+                    "",
+                    "## remove",
+                    "",
+                    "```text",
+                    "| this | line | was | removed | bingus |",
+                    "```",
+                ],
+                [
+                    "Heading(matrix 2026-09-16-030255: Minecraft Club)",
+                    "  TableHead ( itemid | when | who | descriptor | mail )",
+                    "  TableRow  ( est    | uan  | sin | ter        | ius  )",
+                    "  Heading(remove)",
+                    "    text(| this | line | was | removed | bingus |)",
+                ],
+                [
+                    "Heading(matrix 2026-09-16-030255)",
+                    "  Heading(Minecraft Club)",
+                    "    TableHead ( itemid | when | who | descriptor | mail )",
+                    "    TableRow  ( est    | uan  | sin | ter        | ius  )",
+                    "    Heading(remove)",
+                    "      text(| this | line | was | removed | bingus |)",
+                ],
+                [
+                    "Heading(matrix 2026-09-16-030255)",
+                    "  Heading(Minecraft Club)",
+                    "    TableHead ( itemid | when | who | descriptor | mail )",
+                    "    TableRow  ( est    | uan  | sin | ter        | ius  )",
+                    "    Heading(remove)",
+                    "      text(| this | line | was | removed | bingus |)",
+                ],
+                [
+                    "Heading(matrix 2026-09-16-030255: Minecraft Club)",
+                    "  TableHead ( itemid | when | who | descriptor | mail )",
+                    "  TableRow  ( est    | uan  | sin | ter        | ius  )",
+                    "  Heading(remove)",
+                    "    text(| this | line | was | removed | bingus |)",
+                ],
+                [
+                    "Heading(matrix 2026-09-16-030255)",
+                    "  Heading(Minecraft Club)",
+                    "    TableHead ( itemid | when | who | descriptor | mail )",
+                    "    TableRow  ( est    | uan  | sin | ter        | ius  )",
+                    "    Heading(remove)",
+                    "      text(| this | line | was | removed | bingus |)",
+                ]
+            ),
         ];
 
         int mockIndex = 0;
@@ -562,13 +615,13 @@ public class TestOutline
             IList<string> actual =
                 [.. from o in Outline.Scan(mock)
                 where o is Outline
-                from string s in GetStrings(((Outline)o))
+                from string s in GetStrings((Outline)o)
                 select s];
 
-            Assert.That(actual, Has.Count.EqualTo(expected.Count), $"Outline tree count {mockIndex}");
+            Assert.That(actual, Has.Count.EqualTo(expected.Count), $"[Mock {mockIndex}] Outline tree count {mockIndex}");
 
             for (int i = 0; i < (int)Math.Min(actual.Count, expected.Count); ++i)
-                Assert.That(actual[i], Is.EqualTo(expected[i]), $"Outline tree Line {i}");
+                Assert.That(actual[i], Is.EqualTo(expected[i]), $"[Mock {mockIndex}] Outline tree Line {i}");
 
             actual =
                 [.. from o in Outline.Scan(mock)
@@ -576,10 +629,10 @@ public class TestOutline
                 from string s in GetStrings(((Outline)o).CascadeUnfold())
                 select s];
 
-            Assert.That(actual, Has.Count.EqualTo(expectedUnfolded.Count), $"Unfolded outline tree count {mockIndex}");
+            Assert.That(actual, Has.Count.EqualTo(expectedUnfolded.Count), $"[Mock {mockIndex}] Unfolded outline tree count {mockIndex}");
 
             for (int i = 0; i < (int)Math.Min(actual.Count, expectedUnfolded.Count); ++i)
-                Assert.That(actual[i], Is.EqualTo(expectedUnfolded[i]), $"Unfolded outline tree Line {i}");
+                Assert.That(actual[i], Is.EqualTo(expectedUnfolded[i]), $"[Mock {mockIndex}] Unfolded outline tree Line {i}");
 
             actual =
                 [.. from o in Outline.Scan(mock)
@@ -587,10 +640,10 @@ public class TestOutline
                 from string s in GetStrings(((Outline)o).CascadeUnfold().CascadeMerge())
                 select s];
 
-            Assert.That(actual, Has.Count.EqualTo(expectedMerged.Count), $"Merged outline tree count");
+            Assert.That(actual, Has.Count.EqualTo(expectedMerged.Count), $"[Mock {mockIndex}] Merged outline tree count");
 
             for (int i = 0; i < (int)Math.Min(actual.Count, expectedMerged.Count); ++i)
-                Assert.That(actual[i], Is.EqualTo(expectedMerged[i]), $"Merged outline tree Line {i}");
+                Assert.That(actual[i], Is.EqualTo(expectedMerged[i]), $"[Mock {mockIndex}] Merged outline tree Line {i}");
 
             actual =
                 [.. from o in Outline.Scan(mock)
@@ -601,7 +654,7 @@ public class TestOutline
             Assert.That(actual, Has.Count.EqualTo(expectedRefolded.Count), $"Refolded merged outline tree count {mockIndex}");
 
             for (int i = 0; i < (int)Math.Min(actual.Count, expectedRefolded.Count); ++i)
-                Assert.That(actual[i], Is.EqualTo(expectedRefolded[i]), $"Refolded merged outline tree Line {i}");
+                Assert.That(actual[i], Is.EqualTo(expectedRefolded[i]), $"[Mock {mockIndex}] Refolded merged outline tree Line {i}");
 
             actual =
                 [.. from o in Outline.Scan(mock)
@@ -612,7 +665,7 @@ public class TestOutline
             Assert.That(actual, Has.Count.EqualTo(expectedReunfolded.Count), $"Unfolded, merged, folded, and unfolded outline tree count {mockIndex}");
 
             for (int i = 0; i < (int)Math.Min(actual.Count, expectedReunfolded.Count); ++i)
-                Assert.That(actual[i], Is.EqualTo(expectedReunfolded[i]), $"Unfolded, merged, folded, and unfolded outline tree Line {i}");
+                Assert.That(actual[i], Is.EqualTo(expectedReunfolded[i]), $"[Mock {mockIndex}] Unfolded, merged, folded, and unfolded outline tree Line {i}");
 
             mockIndex++;
         }

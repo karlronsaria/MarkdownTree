@@ -1,5 +1,8 @@
 # wish
 
+- [ ] 2026-09-15-010502
+  - the ``_Table`` trivial property could be removed entirely
+
 - [ ] 2024-10-18-034157
   - new list item type just dropped: the *definition* list item
 

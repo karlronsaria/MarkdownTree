@@ -57,7 +57,7 @@ public class Token
         TokenType switch {
             TokenType.NewLine => "\n", // \n
             TokenType.String => $"\"{Content}\"", // "
-            TokenType.Escape => Content, // \
+            TokenType.Escape => Content == ":" || Content == "," ? Content : $"\\{Content}", // \
             TokenType.Bar => "|", // |
             TokenType.Strike => $"~~{Content}~~", // ~~
             TokenType.InlineCode => $"``{Content}``", // ``
@@ -122,7 +122,7 @@ public class Token
                     {
                         Success = true,
                         TokenType = TokenType.Escape,
-                        Content = $"\\{input[start + 1]}",
+                        Content = $"{input[start + 1]}",
                         Start = start,
                         End = start + 2,
                     }

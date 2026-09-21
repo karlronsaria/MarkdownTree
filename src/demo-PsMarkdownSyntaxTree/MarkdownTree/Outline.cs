@@ -252,6 +252,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
         int level = 1,
         int indent = 0
     ) {
+        // [ ] todo (karlr 2026-09-20)
         if (lineType == LineType.Heading)
         {
             foreach (string line in HeadingToMarkdown(level, content))
@@ -401,7 +402,31 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
             yield return string.Empty;
     }
 
-    public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
+    public IEnumerable<string> ToMarkdown()
+    {
+        bool afterNewline = false;
+
+        foreach (string line in ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                if (afterNewline)
+                {
+                    afterNewline = false;
+                }
+                else
+                {
+                    yield return line;
+                    afterNewline = true;
+                }
+            }
+            else
+            {
+                yield return line;
+                afterNewline = false;
+            }
+        }
+    }
 
     public IEnumerable<string> ToMarkdown(int level, int indentSize)
     {
@@ -561,24 +586,23 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     {
         Outline tail = this;
         ISegment cursor = Content;
-        var tempChildren = Children;
+        var children = Children;
 
         while (predicate(tail) && cursor is Colon c)
         {
-            tail.Content = c.Left;
-
             Outline branch = new(LineNumber)
             {
-                LineType = LineType.UnorderedList,
+                LineType = LineType,
             };
 
+            tail.Content = c.Left;
             tail.Children = [branch];
             tail = branch;
             cursor = c.Right;
         }
 
         tail.Content = cursor;
-        tail.Children = tempChildren;
+        tail.Children = children;
         return tail;
     }
 
@@ -605,9 +629,6 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 
         return this;
     }
-
-    // todo: remove
-    public static string HelloWorld(IEnumerable<string> lines) => "Hello, world!";
 
     public static IEnumerable<ITree> Scan(string[] lines) => Scan(lines, _ => true);
 
@@ -707,6 +728,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     public static (Branching, IEnumerator<string>)
     GetTable(IEnumerator<string> lines, Line lineClass)
     {
+        int index = lines.Index();
         string line = lines.Current;
         var tokens = Token.Scan(line, lineClass.Type, lineClass.Length);
         (ISegment s, _) = Segments.ScanRow(new Enumerator<Token>([.. tokens]));
@@ -781,7 +803,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
         }
 
         // Branch created
-        Branching branch = new Table(lines.Index())
+        Branching branch = new Table(index)
         {
             Headings = headings,
             Rows = rows,
@@ -854,7 +876,7 @@ public class CodeBlock(int lineNumber) : Branching(lineNumber), IMarkdownWritabl
     public override Needle? FindFirstSegment(ISegment.Predicate predicate) => null;
     public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate) => [];
 
-    public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(0, IMarkdownWritable.DEFAULT_INDENT_SIZE);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
@@ -924,7 +946,7 @@ public class Table(int lineNumber) : Branching(lineNumber), IMarkdownWritable
         yield break;
     }
 
-    public IEnumerable<string> ToMarkdown() => ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE);
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(0, IMarkdownWritable.DEFAULT_INDENT_SIZE);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {

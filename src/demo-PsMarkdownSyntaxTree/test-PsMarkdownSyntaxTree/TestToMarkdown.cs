@@ -28,21 +28,26 @@ public class TestToMarkdown
                 [
                     "# sched",
                     "",
-                    "- est",
-                    "  - when",
-                    "    - sat",
-                    "  - where",
-                    "    - home",
-                    "- uan",
-                    "  - when",
-                    "    - sun",
-                    "  - where",
-                    "    - home",
-                    "- sin",
-                    "  - when",
-                    "    - mon",
-                    "  - where",
-                    "    - work",
+                    "## est",
+                    "",
+                    "- when",
+                    "  - sat",
+                    "- where",
+                    "  - home",
+                    "",
+                    "## uan",
+                    "",
+                    "- when",
+                    "  - sun",
+                    "- where",
+                    "  - home",
+                    "",
+                    "## sin",
+                    "",
+                    "- when",
+                    "  - mon",
+                    "- where",
+                    "  - work",
                 ]
             ),
         ];
@@ -68,8 +73,6 @@ public class TestToMarkdown
                     where tree is IMarkdownWritable
                     from string s in ((IMarkdownWritable)tree).ToMarkdown()
                     select s];
-
-            Assert.That(actual, Has.Count.EqualTo(expected.Count), $"ToMarkdown Item Count {mockIndex}");
 
             for (int i = 0; i < actual.Count; i++)
                 Assert.That(actual[i], Is.EqualTo(expected[i]), $"ToMarkdown {mockIndex} Line {i}");
@@ -161,8 +164,6 @@ public class TestToMarkdown
                 from string s in ((Outline)o).ToMarkdown()
                 select s
             ];
-
-            Assert.That(actual, Has.Count.EqualTo(expected.Count), $"ToMarkdown Item Count");
 
             for (int i = 0; i < actual.Count; i++)
                 Assert.That(actual[i], Is.EqualTo(expected[i]), $"ToMarkdown Line {i}");

@@ -86,13 +86,7 @@ function Write-MarkdownTree_Deprecated {
                     $lead = '- '
 
                     foreach ($row in $table) {
-                        if ($HeadingLevels -ge 0) {
-                            Write-Output "$('  ' * ($Level - $HeadingLevels))$lead$row"
-                        }
-                        else {
-                            Write-Output "$('  ' * $Level)$lead$row"
-                        }
-
+                        Write-Output "$('  ' * ($Level - $HeadingLevels))$lead$row"
                         $lead = '  '
                     }
                 }

@@ -16,6 +16,37 @@ namespace PsMarkdownTree;
  * - _MissingName
  */
 
+public static class Tables
+{
+    public static PSObject[] ToPSTable(MarkdownTree.Parse.Table table)
+    {
+        IList<string> headings =
+            [.. from h in table.Headings
+                select h.ToString().Trim()];
+
+        IList<PSObject> rows = [];
+
+        foreach (var row in table.Rows)
+        {
+            IList<string> cells =
+                [.. from c in row
+                    select c.ToString().Trim()];
+
+            var subobj = new PSObject();
+
+            for (int i = 0; i < headings.Count; ++i)
+            {
+                string cell = i < cells.Count ? cells[i] : string.Empty;
+                subobj.Members.Add(new PSNoteProperty(headings[i], cell));
+            }
+
+            rows.Add(subobj);
+        }
+
+        return [.. rows];
+    }
+}
+
 [Cmdlet(
     VerbsCommon.Find, "MarkdownTree",
     DefaultParameterSetName = "ByPropertyName"
@@ -125,11 +156,22 @@ public class FindMarkdownTreeCommand : PSCmdlet
 [Cmdlet(VerbsCommunications.Write, "MarkdownTree")]
 public class WriteMarkdownTreeCommand : Cmdlet
 {
+    public delegate string[] WriteTableCallback(IList<PSObject> rows, int level, int indent);
+
     [Parameter(
         ValueFromPipeline = true,
         Position = 0
     )]
     public object[] InputObject = [];
+
+    [Parameter()]
+    public int HeadingLevels = 0;
+
+    [Parameter()]
+    public WriteTableCallback? WriteTable;
+    // public ScriptBlock? WriteTable;
+
+    private bool _followsBlank = true;
 
     protected override void ProcessRecord()
     {
@@ -160,7 +202,8 @@ public class WriteMarkdownTreeCommand : Cmdlet
                     Write(
                         psobject: psobject,
                         indentSize: IMarkdownWritable.DEFAULT_INDENT_SIZE,
-                        level: 0
+                        level: 0,
+                        headingLevels: HeadingLevels
                     );
                 }
             }
@@ -183,16 +226,14 @@ public class WriteMarkdownTreeCommand : Cmdlet
     Write(
         PSObject psobject,
         int indentSize = IMarkdownWritable.DEFAULT_INDENT_SIZE,
-        int level = 0
+        int level = 0,
+        int headingLevels = 0
     ) {
         string box = psobject.Properties.Any(p => p.Name == "_Completed")
             ? (bool)psobject.Properties["_Completed"].Value
                 ? "[x] "
                 : "[ ] "
             : string.Empty;
-
-        string firstSpace = string.Concat(Enumerable.Repeat(' ', level * indentSize));
-        string secndSpace = string.Concat(Enumerable.Repeat(' ', (level + 1) * indentSize));
 
         var langCapture = psobject.Properties.Match("_Language");
         var linesCapture = psobject.Properties.Match("_Lines");
@@ -222,10 +263,16 @@ public class WriteMarkdownTreeCommand : Cmdlet
                 Lines = lines,
             };
 
+            if (!_followsBlank)
+                WriteObject("");
+
             Write(codeBlock.ToMarkdown(
                 level: level + 1,
                 nextIndent: (level + 1) * indentSize
             ));
+
+            WriteObject("");
+            _followsBlank = true;
         }
 
         IList<string> keywords = [
@@ -234,53 +281,129 @@ public class WriteMarkdownTreeCommand : Cmdlet
             "_Lines",
         ];
 
+        bool isHeading = level < headingLevels;
+
+        string lead = isHeading
+            ? $"{string.Concat(Enumerable.Repeat('#', level + 1))} "
+            : $"{string.Concat(Enumerable.Repeat(' ', (level - headingLevels) * indentSize))}- ";
+
+        int mdLevel = level - headingLevels;
+
         foreach (var prop in
             from p in psobject.Properties
             where !keywords.Contains(p.Name)
             select p
         ) {
-            if (prop.Name == "_Table" && prop.Value is IList<PSObject> tableList)
+            if (prop.Name == "_Table")
             {
-                foreach (Table table in ToTable(tableList))
-                    Write(table.ToMarkdown(
-                        level: level,
-                        nextIndent: level * indentSize
-                    ));
+                IList<PSObject> myList = [];
 
+                if (prop.Value is object[] objects)
+                    myList = [.. from o in objects select o as PSObject];
+                else if (prop.Value is IList<PSObject> tableList)
+                    myList = tableList;
+                else if (prop.Value is PSObject psObject)
+                    myList = [psObject];
+
+                if (!_followsBlank)
+                    WriteObject("");
+
+                if (WriteTable != null)
+                    foreach (var row in WriteTable.Invoke(myList, mdLevel, indentSize))
+                        WriteObject(row);
+                else
+                    foreach (Table table in ToTable(myList))
+                        Write(table.ToMarkdown(
+                            level: mdLevel,
+                            nextIndent: mdLevel * indentSize
+                        ));
+
+                WriteObject("");
+                _followsBlank = true;
                 continue;
             }
 
-            WriteObject($"{firstSpace}- {box}{prop.Name}");
+            _followsBlank = false;
+
+            // // todo: remove
+            // if (level > 0 && level <= headingLevels)
+            //     WriteObject(string.Empty);
+
+            WriteObject($"{lead}{box}{prop.Name}");
+
+            if (isHeading)
+            {
+                WriteObject("");
+                _followsBlank = true;
+            }
 
             if (prop.Value is PSObject branch)
                 Write(
                     psobject: branch,
                     level: level + 1,
-                    indentSize: indentSize
+                    indentSize: indentSize,
+                    headingLevels: headingLevels
                 );
 
             else if (prop.Value is IMarkdownWritable contentTree)
                 Write(contentTree.ToMarkdown(
-                    level: level + 1,
-                    indent: (level + 1) * indentSize
+                    level: mdLevel + 1,
+                    indent: (mdLevel + 1) * indentSize
                 ));
 
             else if (prop.Value is IList<PSObject> list)
                 foreach (Table table in ToTable(list))
                     Write(table.ToMarkdown(
-                        level: level + 1,
-                        nextIndent: (level + 1) * indentSize
+                        level: mdLevel + 1,
+                        nextIndent: (mdLevel + 1) * indentSize
                     ));
 
             else if (prop.Value is string str)
-                WriteObject($"{secndSpace}- {str}");
+                WriteLeaf(
+                    inputObject: str,
+                    indentSize: indentSize,
+                    level: level + 1,
+                    headingLevels: headingLevels
+                );
 
             else if (prop.Value is object[] array)
                 foreach (var item in array)
-                    WriteObject($"{secndSpace}- {item}");
+                    WriteLeaf(
+                        inputObject: item,
+                        indentSize: indentSize,
+                        level: level + 1,
+                        headingLevels: headingLevels
+                    );
 
             else
-                WriteObject($"{secndSpace}- {prop.Value.ToString()?.Trim() ?? string.Empty}");
+                WriteLeaf(
+                    inputObject: prop.Value,
+                    indentSize: indentSize,
+                    level: level + 1,
+                    headingLevels: headingLevels
+                );
+        }
+    }
+
+    protected void
+    WriteLeaf(
+        object inputObject,
+        int indentSize = IMarkdownWritable.DEFAULT_INDENT_SIZE,
+        int level = 0,
+        int headingLevels = 0
+    ) {
+        bool isHeading = level < headingLevels;
+
+        string lead = isHeading
+            ? $"{string.Concat(Enumerable.Repeat('#', level + 1))} "
+            : $"{string.Concat(Enumerable.Repeat(' ', (level - headingLevels) * indentSize))}- ";
+
+        WriteObject($"{lead}{inputObject.ToString()?.Trim() ?? string.Empty}");
+
+        if (isHeading)
+        {
+            WriteObject("");
+            _followsBlank = true;
         }
     }
 
@@ -291,9 +414,7 @@ public class WriteMarkdownTreeCommand : Cmdlet
         if (first.Count != secnd.Count)
             return false;
 
-        int count = int.Min(first.Count, secnd.Count);
-
-        for (int i = 0; i < count; ++i)
+        for (int i = 0; i < first.Count; ++i)
             if (!first[i].Equals(secnd[i]))
                 return false;
 
@@ -550,30 +671,7 @@ public class GetMarkdownTreeCommand : Cmdlet
 
         if (tree is Table table)
         {
-            IList<string> headings =
-                [.. from h in table.Headings
-                    select h.ToString().Trim()];
-
-            IList<PSObject> rows = [];
-
-            foreach (var row in table.Rows)
-            {
-                IList<string> cells =
-                    [.. from c in row
-                        select c.ToString().Trim()];
-
-                var subobj = new PSObject();
-
-                for (int i = 0; i < headings.Count; ++i)
-                {
-                    string cell = i < cells.Count ? cells[i] : string.Empty;
-                    subobj.Members.Add(new PSNoteProperty(headings[i], cell));
-                }
-
-                rows.Add(subobj);
-            }
-
-            obj.Properties.Add(new PSNoteProperty("_Table", rows));
+            obj.Properties.Add(new PSNoteProperty("_Table", Tables.ToPSTable(table)));
 
             if (table.Children.Count > 0)
                 AddTreeProperty(obj, table, "_Children");

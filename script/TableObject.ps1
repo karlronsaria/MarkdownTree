@@ -274,58 +274,74 @@ function Write-MdTable {
 
     Begin {
         $list = @()
-        $properties = @()
+        $headings = @()
     }
 
     Process {
-        $InputObject | foreach {
+        $InputObject | ForEach-Object {
             $list += @($_)
 
-            $properties += @($_.PsObject.Properties.Name | where {
-                # (karlr 2024-03-14): Null values discovered in the output
-                $_ -and $_ -notin $properties
-            })
+            $headings += @($_.PsObject.Properties.Name |
+                Where-Object {
+                    # (karlr 2024-03-14): Null values discovered in the output
+                    $_ -and $_ -notin $headings
+                }
+            )
         }
     }
 
     End {
         $lengths = @{}
 
-        foreach ($property in $properties) {
-            $lengths[$property] = $property.Length
+        foreach ($heading in $headings) {
+            $lengths[$heading] = $heading.Length
         }
 
         $rows += @(foreach ($item in $list) {
-            $row = @{}
+            $highestCount = $headings |
+                ForEach-Object { @($item.$_).Count } |
+                Measure-Object -Maximum |
+                ForEach-Object Maximum
 
-            foreach ($property in $properties) {
-                $value = if ($property -in $item.PsObject.Properties.Name) {
-                    $item.$property
-                } else {
-                    ""
+            for ($i = 0; $i -lt $highestCount; ++$i) {
+                $row = @{}
+            
+                foreach ($heading in $headings) {
+                    $value = if ($heading -in $item.PsObject.Properties.Name) {
+                        $item.$heading
+                    } else {
+                        ""
+                    }
+                    
+                    $value = if ($i -le @($value).Count) {
+                        @($value)[$i]
+                    }
+                    else {
+                        ""
+                    }
+
+                    if ($value.Length -gt $lengths[$heading]) {
+                        $lengths[$heading] = $value.Length
+                    }
+
+                    $row[$heading] = $value
                 }
 
-                if ($value.Length -gt $property.Length) {
-                    $lengths[$property] = $value.Length
-                }
-
-                $row[$property] = $value
+                $row
             }
-
-            $row
         })
 
         $str = "|"
 
-        foreach ($property in $properties) {
-            $str += " " + ("{0, -$($lengths[$property])}" -f $property) + " |"
+        foreach ($heading in $headings) {
+            $str += " " + ("{0, -$($lengths[$heading])}" -f $heading) + " |"
         }
 
         Write-Output $str
         $str = "|"
 
-        foreach ($property in $properties) {
-            $str += " " + ("-" * $lengths[$property]) + " |"
+        foreach ($heading in $headings) {
+            $str += " " + ("-" * $lengths[$heading]) + " |"
         }
 
         Write-Output $str
@@ -333,8 +349,8 @@ function Write-MdTable {
         foreach ($row in $rows) {
             $str = "|"
 
-            foreach ($property in $properties) {
-                $str += " " + ("{0, -$($lengths[$property])}" -f $($row[$property])) + " |"
+            foreach ($heading in $headings) {
+                $str += " " + ("{0, -$($lengths[$heading])}" -f $($row[$heading])) + " |"
             }
 
             Write-Output $str
