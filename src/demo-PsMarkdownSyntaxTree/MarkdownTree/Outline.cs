@@ -234,7 +234,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 
     public static IEnumerable<string> HeadingToMarkdown(int level, ITree content)
     {
-        yield return $"{string.Concat(Enumerable.Repeat('#', level))} {content.ToString()?.Trim()}";
+        yield return $"{string.Concat(Enumerable.Repeat('#', level + 1))} {content.ToString()?.Trim()}";
         yield return string.Empty;
     }
 
@@ -406,7 +406,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     {
         bool afterNewline = false;
 
-        foreach (string line in ToMarkdown(1, IMarkdownWritable.DEFAULT_INDENT_SIZE))
+        foreach (string line in ToMarkdown(0, IMarkdownWritable.DEFAULT_INDENT_SIZE))
         {
             if (string.IsNullOrWhiteSpace(line))
             {
@@ -876,7 +876,8 @@ public class CodeBlock(int lineNumber) : Branching(lineNumber), IMarkdownWritabl
     public override Needle? FindFirstSegment(ISegment.Predicate predicate) => null;
     public override IEnumerable<Needle> FindAllSegments(ISegment.Predicate predicate) => [];
 
-    public IEnumerable<string> ToMarkdown() => ToMarkdown(0, IMarkdownWritable.DEFAULT_INDENT_SIZE);
+    // (karlr 2026-09-20): Code blocks should not be indented by default.
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(0, 0);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
@@ -946,7 +947,8 @@ public class Table(int lineNumber) : Branching(lineNumber), IMarkdownWritable
         yield break;
     }
 
-    public IEnumerable<string> ToMarkdown() => ToMarkdown(0, IMarkdownWritable.DEFAULT_INDENT_SIZE);
+    // (karlr 2026-09-20): Tables should not be indented by default.
+    public IEnumerable<string> ToMarkdown() => ToMarkdown(0, 0);
 
     public IEnumerable<string> ToMarkdown(int level, int nextIndent)
     {
