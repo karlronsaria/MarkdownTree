@@ -46,8 +46,6 @@ using System.Linq;
 //     foreach (var item in tree.ToMarkdown())
 //         Console.WriteLine(item);
 
-return;
-
 
 IList<string> doc;
 
@@ -76,6 +74,31 @@ issue
 */
 
 doc = [
+
+    "# moniker",
+    "",
+    "ytdlp",
+    ": yt-dlp",
+    ": - added: 2026-09-22",
+    "",
+    "legospike",
+    ": LEGO Education Spike",
+    ": - added: 2026-07-23",
+    "",
+    "cnladera",
+    ": Code Ninjas Ladera Ranch",
+    ": Code Ninjas Ladera Ranch Center Facility",
+    ": - [more info](./link/emp/link_-_2023-02-20_EmployerCodeNinjas.md)",
+    ": - added: 2026-07-14",
+    "",
+    "cnaliso",
+    ": Code Ninjas Aliso Viejo",
+    ": Code Ninjas Aliso Viejo Center Facility",
+    ": - [more info](./link/emp/link_-_2023-02-20_EmployerCodeNinjas.md)",
+    ": - added: 2026-07-14",
+
+
+
     // "# est",
     // "- actual: cannot use login <cnalisoviejo@gmail.com>",
 

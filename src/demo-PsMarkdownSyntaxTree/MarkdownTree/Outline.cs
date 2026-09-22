@@ -867,6 +867,11 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 
         return (codeBlock, lines);
     }
+
+    public override string ToString()
+    {
+        return Name;
+    }
 }
 
 public class ActionItem(int lineNumber) : Outline(lineNumber)

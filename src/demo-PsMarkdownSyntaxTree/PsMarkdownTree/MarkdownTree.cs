@@ -612,40 +612,49 @@ public class GetMarkdownTreeCommand : Cmdlet
         obj.Properties.Add(new PSNoteProperty("_Content", outline));
     }
 
-    private static bool ConvertLeafToString(PSObject obj, Outline outline)
+    // (karlr 2026-09-21): It seems I'm getting two different concepts confused.
+    // I'm checking to see if this node is a trivial branch, but I'm also looking for
+    // leaf branches. They may seem like the same path, but are actually different.
+    // A branch can have multiple leaves.
+
+    private static bool IsLeaf(ITree child)
     {
-        if (outline.Children.Count != 1)
-            return false;
+        return (child is Outline outline && outline.Children.Count == 0) || (child is ISegment);
+    }
 
-        var child = outline.Children[0];
+    private static object? ConvertLeafToString(Outline outline)
+    {
+        IList<string> list = [];
 
-        // [!] note: Branching type accepts code blocks, tables, and action items
-        if (child is Outline p && p.Children.Count == 0)
+        foreach (ITree child in outline.Children)
         {
-            string value = child is Outline o
-                ? o.Name
-                : child.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
+            if (!IsLeaf(child))
+                return null;
 
-            obj.Properties.Add(new PSNoteProperty(outline.Name, value));
-            return true;
+            string value = child.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
+            list.Add(value);
         }
 
-        if (child is ISegment s)
-        {
-            string value = s.ToString()?.Trim() ?? MISSING_NAME_MESSAGE;
-            obj.Properties.Add(new PSNoteProperty(outline.Name, value));
-            return true;
-        }
+        if (!list.Any())
+            return null;
 
-        return false;
+        if (list.Count == 1)
+            return (object)list[0];
+
+        return (object)list;
     }
 
     private void AddProperty(PSObject obj, ITree tree)
     {
         if (tree is Outline outline)
         {
-            if (ConvertLeafToString(obj, outline))
+            var leaves = ConvertLeafToString(outline);
+
+            if (leaves != null)
+            {
+                obj.Properties.Add(new PSNoteProperty(outline.Name, leaves));
                 return;
+            }
 
             if (Full.IsPresent)
                 AddOutlineProperty(obj, outline);
