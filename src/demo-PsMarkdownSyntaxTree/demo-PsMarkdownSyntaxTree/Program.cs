@@ -79,10 +79,10 @@ doc = [
     // "# est",
     // "- actual: cannot use login <cnalisoviejo@gmail.com>",
 
-    "| retrieved | what | url |",
-    "|-----------|------|-----|",
-    "| 2025-04-09 | padlet | <https://padlet.com/cn_edu/jr-explorers-bits-bytes-h2fk29k4u37fuw4t> |",
-    "| 2025-04-09 | slide share | <https://drive.google.com/drive/folders/1sTMmh52hH4_XfvLbFfz1hqxhgc94f_mp> |",
+    // "| retrieved | what | url |",
+    // "|-----------|------|-----|",
+    // "| 2025-04-09 | padlet | <https://padlet.com/cn_edu/jr-explorers-bits-bytes-h2fk29k4u37fuw4t> |",
+    // "| 2025-04-09 | slide share | <https://drive.google.com/drive/folders/1sTMmh52hH4_XfvLbFfz1hqxhgc94f_mp> |",
 
     // "# est",
     // "- uan",

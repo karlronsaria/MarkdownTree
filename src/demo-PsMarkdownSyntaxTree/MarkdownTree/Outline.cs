@@ -379,15 +379,18 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
                 if (parentLineType == LineType.Heading)
                     indent = 0;
 
-                string space = string.Concat(Enumerable.Repeat(' ', indent));
+                int spaceLen = o.LineType == LineType.Define
+                    ? indent - indentSize
+                    : indent;
+
+                string space = string.Concat(Enumerable.Repeat(' ', spaceLen));
                 yield return $"{space}{lead}{o.Name}";
 
-                int nextIndent = 
-                    o.LineType == LineType.Heading
-                        ? 0
-                        : indent +
-                          (o.LineType == LineType.OrderedList && indentSize < 3
-                              ? 3 : indentSize);
+                int nextIndent = o.LineType == LineType.Heading
+                    ? 0
+                    : indent +
+                      (o.LineType == LineType.OrderedList && indentSize < 3
+                          ? 3 : indentSize);
 
                 prevType = o.LineType;
 
@@ -398,7 +401,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
             lastLineWhiteSpace = false;
         }
 
-        if (prevType == LineType.ImageMacro)
+        if (prevType == LineType.ImageMacro || prevType == LineType.Define)
             yield return string.Empty;
     }
 
@@ -437,9 +440,8 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
 
         if (LineType != LineType.Heading)
             indent =
-                LineType != LineType.Heading &&
-                LineType == LineType.OrderedList && indentSize == 2
-                    ? 3 : indentSize;
+                LineType == LineType.OrderedList && indentSize == IMarkdownWritable.DEFAULT_INDENT_SIZE
+                    ? IMarkdownWritable.DEFAULT_INDENT_SIZE + 1 : indentSize;
 
         foreach (string line in ChildrenAsMarkdown(level + 1, indent, indentSize))
             yield return line;
@@ -701,11 +703,15 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
                 }
             }
 
+            int nextLevel = lineClass.Type == LineType.Define
+                ? lineClass.Indent + IMarkdownWritable.DEFAULT_INDENT_SIZE
+                : lineClass.Indent;
+
             if (lineClass is HeadingLine c)
             {
                 depth.Set(c.Level);
             }
-            else if (!depth.Next(lineClass.Indent))
+            else if (!depth.Next(nextLevel))
             {
                 // Branch created
                 yield return new Malformed(e.Index()) { Children = [branch] };

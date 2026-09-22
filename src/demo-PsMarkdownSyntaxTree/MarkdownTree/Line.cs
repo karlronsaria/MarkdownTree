@@ -118,6 +118,14 @@ public partial class Line
                 Capture = capture,
             },
 
+            LineType.Define => new Line
+            {
+                Type = type,
+                Indent = capture?.Groups["indent"].Length ?? 0,
+                Length = nextStart,
+                Capture = capture,
+            },
+
             LineType.Paragraph => new Line
             {
                 Type = type,
@@ -132,7 +140,7 @@ public partial class Line
                 Indent = capture?.Groups["indent"].Length ?? 0,
                 Length = nextStart,
                 Capture = capture,
-            }
+            },
         };
 
         if (lineClass.Actionable)
@@ -162,7 +170,7 @@ public partial class Line
     [GeneratedRegex(@"^(?<indent>\s*)\|")]
     private static partial Regex TableRow();
 
-    [GeneratedRegex(@"^(?<indent>\s+):\s")]
+    [GeneratedRegex(@"^(?<indent>\s*)\:\s")]
     private static partial Regex Define();
 
     [GeneratedRegex(@"^(?<indent>\s*)!\[")]
