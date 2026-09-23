@@ -74,30 +74,44 @@ issue
 */
 
 doc = [
+    // "# estuans",
+    // "",
+    // "inter",
+    // ": iu-sir",
+    // ": - avehe: 2026-09-22",
+    // "",
+    // "mentiseph",
+    // ": IROT Hestuans Inter",
+    // ": - iusir: 2026-07-23",
+    // "",
+    // "avehemen",
+    // ": Tise Phirot Hestu Ansin",
+    // ": Teri Usirav Ehemen Tisep Hiroth estuans",
+    // ": - [inte rius](./irav/ehe/ment_-_2023-02-20_IsephiroTheStuans.in)",
+    // ": - teriu: 2026-07-14",
+    // "",
+    // "siraveh",
+    // ": Emen Tiseph Iroth estu",
+    // ": Ansi Nteriu Sirav Eheme Ntisep Hirothe",
+    // ": - [stua nsin](./teri/usi/rave_-_2023-02-20_HementisEphiRothe.st)",
+    // ": - uansi: 2026-07-14",
+    // "",
 
-    "# moniker",
-    "",
-    "ytdlp",
-    ": yt-dlp",
-    ": - added: 2026-09-22",
-    "",
-    "legospike",
-    ": LEGO Education Spike",
-    ": - added: 2026-07-23",
-    "",
-    "cnladera",
-    ": Code Ninjas Ladera Ranch",
-    ": Code Ninjas Ladera Ranch Center Facility",
-    ": - [more info](./link/emp/link_-_2023-02-20_EmployerCodeNinjas.md)",
-    ": - added: 2026-07-14",
-    "",
-    "cnaliso",
-    ": Code Ninjas Aliso Viejo",
-    ": Code Ninjas Aliso Viejo Center Facility",
-    ": - [more info](./link/emp/link_-_2023-02-20_EmployerCodeNinjas.md)",
-    ": - added: 2026-07-14",
 
 
+    "# estua",
+    "- nsin: Teriusi Raveheme",
+    "- ntis",
+    "- ephi: roth",
+    "- est",
+    "  - uan: <sinte://riu.siraveh.eme>",
+    "  - ntise: <phiroth@estua.nsi>",
+    "  - nteriusir: 2023-05-10",
+    "- aveh",
+    "  - ementise",
+    "    - [x] hir-2025-04-09",
+    "    - [x] 2023-10-04",
+    "    - [x] 2023-05-12",
 
     // "# est",
     // "- actual: cannot use login <cnalisoviejo@gmail.com>",
@@ -153,6 +167,18 @@ doc = [
     // "  - [2025-02-12](link)",
 ];
 
+// IList<string> actual =
+//     [.. from o in Outline.Scan(doc)
+//     where o is Outline
+//     from string s in TestOutline.GetStrings((Outline)o)
+//     select s];
+// 
+// foreach (var item in actual)
+//     Console.WriteLine(item);
+// 
+// return;
+
+
 
 
 using PowerShell powershell = PowerShell.Create();
@@ -191,10 +217,10 @@ powershell.AddScript("$input").Invoke();
 powershell.Commands.Clear();
 powershell.AddCommand("Write-MarkdownTree");
 
-powershell.AddScript("$input").Invoke();
-powershell.Commands.Clear();
-powershell.AddCommand("Find-MarkdownTree");
-powershell.AddParameter("PropertyName", new List<string> { "est" });
+// powershell.AddScript("$input").Invoke();
+// powershell.Commands.Clear();
+// powershell.AddCommand("Find-MarkdownTree");
+// powershell.AddParameter("PropertyName", new List<string> { "est" });
 
 foreach (var line in powershell.Invoke(collection))
     Console.WriteLine(line);

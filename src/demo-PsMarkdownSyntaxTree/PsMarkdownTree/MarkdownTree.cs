@@ -351,12 +351,21 @@ public class WriteMarkdownTreeCommand : Cmdlet
                     indent: (mdLevel + 1) * indentSize
                 ));
 
-            else if (prop.Value is IList<PSObject> list)
-                foreach (Table table in ToTable(list))
+            else if (prop.Value is IList<PSObject> objList)
+                foreach (Table table in ToTable(objList))
                     Write(table.ToMarkdown(
                         level: mdLevel + 1,
                         nextIndent: (mdLevel + 1) * indentSize
                     ));
+
+            else if (prop.Value is IList<string> strList)
+                foreach (var item in strList)
+                    WriteLeaf(
+                        inputObject: item,
+                        indentSize: indentSize,
+                        level: level + 1,
+                        headingLevels: headingLevels
+                    );
 
             else if (prop.Value is string str)
                 WriteLeaf(

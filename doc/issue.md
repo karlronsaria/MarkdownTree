@@ -1,6 +1,8 @@
 # issue
 
-- [ ] issue 2026-08-17-203354
+## resolved
+
+- [x] issue 2026-08-17-203354
   - description: table after an inline branch fails
   - howto
 
@@ -57,8 +59,6 @@
             - mail
               - sinter@mail.com
       ```
-
-## resolved
 
 - [x] issue 2026-08-28-020403
   - howto
