@@ -167,16 +167,16 @@ doc = [
     // "  - [2025-02-12](link)",
 ];
 
-// IList<string> actual =
-//     [.. from o in Outline.Scan(doc)
-//     where o is Outline
-//     from string s in TestOutline.GetStrings((Outline)o)
-//     select s];
-// 
-// foreach (var item in actual)
-//     Console.WriteLine(item);
-// 
-// return;
+IList<string> actual =
+    [.. from o in Outline.Scan(doc, t => t is Outline o && o.Name != "ementise")
+    where o is Outline
+    from string s in TestOutline.GetStrings((Outline)o)
+    select s];
+
+foreach (var item in actual)
+    Console.WriteLine(item);
+
+return;
 
 
 

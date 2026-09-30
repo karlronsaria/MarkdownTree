@@ -1,6 +1,7 @@
 ﻿using MarkdownTree.Lex;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks.Sources;
 
 namespace MarkdownTree.Parse;
 
@@ -639,7 +640,7 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
     public static IEnumerable<ITree> Scan(IEnumerable<string> lines, Predicate whereOutline)
     {
         TreeDepth depth = new();
-        OutlineStack stack = new();
+        OutlineStack stack = new(whereOutline);
         IEnumerator<string> e = new NonStandardEnumerator<string>([.. lines], () => string.Empty);
 
         // Advance enumerator
@@ -698,8 +699,9 @@ public class Outline(int lineNumber) : Branching(lineNumber), IMarkdownWritable
                 {
                     o.Content = Segments.Scan(lineClass.Type, new Enumerator<Token>([.. tokens]));
 
-                    if (!whereOutline(o))
-                        continue;
+                    // // todo: move
+                    // if (!whereOutline(o))
+                    //     continue;
                 }
             }
 
@@ -1037,6 +1039,18 @@ public class TreeDepth()
 
 public class OutlineStack : Stack<(IList<ITree>, ITree?)>
 {
+    public OutlineStack()
+    {
+        _accept = _ => true;
+    }
+
+    public OutlineStack(Outline.Predicate accept)
+    {
+        _accept = accept;
+    }
+
+    private readonly Outline.Predicate _accept;
+
     public (IList<ITree>, IList<Malformed>) Flush()
     {
         IList<ITree> tree = [];
@@ -1099,6 +1113,22 @@ public class OutlineStack : Stack<(IList<ITree>, ITree?)>
 
     private new (IList<ITree>, Malformed?) Pop()
     {
+        (var list, Malformed? error) = GetPopList();
+
+        foreach (ITree tree in list)
+            _accept(tree);
+
+        list = [..
+            from item in list
+            where item is ITree tree && _accept(tree)
+            select item
+        ];
+
+        return (list, error);
+    }
+
+    private (IList<ITree>, Malformed?) GetPopList()
+    {
         if (Count == 0)
             return ([], null);
 
@@ -1119,7 +1149,8 @@ public class OutlineStack : Stack<(IList<ITree>, ITree?)>
             if (prevTail is Branching parent)
             {
                 foreach (var item in list)
-                    parent.Children.Add(item);
+                    if (_accept(item))
+                        parent.Children.Add(item);
 
                 base.Push((prevList, prevTail));
             }

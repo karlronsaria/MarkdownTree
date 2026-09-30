@@ -1077,7 +1077,7 @@ function Get-NoteProperty {
 
     $properties = $InputObject.PsObject.Properties `
         | Where-Object { 'NoteProperty' -eq $_.MemberType }
-
+        
     if ([String]::IsNullOrEmpty($PropertyName)) {
         return $properties
     }
