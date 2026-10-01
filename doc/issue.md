@@ -2,6 +2,33 @@
 
 ## resolved
 
+- [x] issue 2026-10-01-062445
+  - where: MarkdownTree
+  - howto
+  
+    in file
+
+    ```markdown
+    # sched: daily todo
+
+    - when: 1000
+    - every: day
+    - type: routine
+    - note
+      - homework
+        - powershell
+
+          ` ` `powershell
+          Get-MySchedule -Subdir homework
+          ` ` `
+    ```
+
+    in powershell
+
+    ```powershell
+    cat file.md | Get-MarkdownTree
+    ```
+
 - [x] issue 2026-08-17-203354
   - description: table after an inline branch fails
   - howto

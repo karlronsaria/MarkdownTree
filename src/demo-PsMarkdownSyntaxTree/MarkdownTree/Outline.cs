@@ -1044,12 +1044,12 @@ public class OutlineStack : Stack<(IList<ITree>, ITree?)>
         _accept = _ => true;
     }
 
-    public OutlineStack(Outline.Predicate accept)
+    public OutlineStack(Branching.Predicate accept)
     {
         _accept = accept;
     }
 
-    private readonly Outline.Predicate _accept;
+    private readonly Branching.Predicate _accept;
 
     public (IList<ITree>, IList<Malformed>) Flush()
     {

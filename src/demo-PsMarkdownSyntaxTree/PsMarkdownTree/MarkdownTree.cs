@@ -532,28 +532,52 @@ public class GetMarkdownTreeCommand : Cmdlet
             _markdown.Add(item);
     }
 
+    protected bool AcceptNonMutedBranch(ITree branch) =>
+        branch is not Outline o || !MuteProperty.Contains(o.Name);
+
+    protected bool MergeBranch(ITree branch) =>
+        branch is Outline o && MergeProperty.Contains(o.Name);
+
+    protected bool FoldBranch(ITree branch) =>
+        branch is Outline o && FoldProperty.Contains(o.Name);
+
     protected override void EndProcessing()
     {
         base.EndProcessing();
 
-        var forest = Outline.Scan(_markdown, c => !MuteProperty.Contains(((Outline)c).Name));
+        var forest = Outline.Scan(_markdown, AcceptNonMutedBranch);
 
         if (MergeProperty.Length > 0)
         {
-            forest = Outline.Merge([.. forest], c => MergeProperty.Contains(((Outline)c).Name));
+            forest = Outline.Merge([.. forest], MergeBranch);
 
             forest =
-                [.. from t in forest
-                    where t is Outline
-                    select ((Outline)t).CascadeMerge(c => MergeProperty.Contains(((Outline)c).Name))];
+                [.. from tree in forest
+                    select tree is Outline o
+                        ? o.CascadeMerge(MergeBranch)
+                        : tree
+                ];
+
+            // // todo: remove
+            // forest =
+            //     [.. from t in forest
+            //         where t is Outline
+            //         select ((Outline)t).CascadeMerge(MergeBranch)];
         }
 
         if (FoldProperty.Length > 0)
         {
             forest =
-                from t in forest
-                where t is Outline
-                select ((Outline)t).Fold(c => FoldProperty.Contains(((Outline)c).Name));
+                from tree in forest
+                select tree is Outline o
+                    ? o.Fold(FoldBranch)
+                    : tree;
+
+            // // todo
+            // forest =
+            //     from t in forest
+            //     where t is Outline
+            //     select ((Outline)t).Fold(FoldBranch);
         }
 
         foreach (var tree in forest)

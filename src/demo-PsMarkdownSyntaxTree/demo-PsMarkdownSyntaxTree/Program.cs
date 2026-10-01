@@ -100,7 +100,12 @@ doc = [
 
 
     "# estua",
+    "",
+    "  ```powershell",
+    "  Write-Output ''",
+    "  ```",
     "- nsin: Teriusi Raveheme",
+    "",
     "- ntis",
     "- ephi: roth",
     "- est",
