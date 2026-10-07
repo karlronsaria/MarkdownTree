@@ -1,5 +1,44 @@
 # issue
 
+- [ ] issue 2026-10-07-031802
+  - description: the first list item should belong to the non-list item immediately above it
+    - eg
+      - this results in a markdown bad format warning
+
+        ```markdown
+        As of Minecraft Java 1.21.11, Mojang changed the name of ``doInsomnia`` to ``spawn_phantoms``.
+
+          - form 1
+
+            ` ` `text
+            /gamerule spawn_phantoms false
+            ` ` `
+
+          - form 2
+
+            ` ` `text
+            /gamerule minecraft:spawn_phantoms false
+            ` ` `
+        ```
+
+      - this doesn't read as a tree structure in most of my scripts
+
+        ```markdown
+        As of Minecraft Java 1.21.11, Mojang changed the name of ``doInsomnia`` to ``spawn_phantoms``.
+
+        - form 1
+
+          ` ` `text
+          /gamerule spawn_phantoms false
+          ` ` `
+
+        - form 2
+
+          ` ` `text
+          /gamerule minecraft:spawn_phantoms false
+          ` ` `
+        ```
+
 ## resolved
 
 - [x] issue 2026-10-01-062445

@@ -1148,6 +1148,7 @@ public class OutlineStack : Stack<(IList<ITree>, ITree?)>
         {
             if (prevTail is Branching parent)
             {
+                // todo: add rule here
                 foreach (var item in list)
                     if (_accept(item))
                         parent.Children.Add(item);
